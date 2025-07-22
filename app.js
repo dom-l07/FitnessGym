@@ -7,10 +7,9 @@ require('dotenv').config();
 
 const app = express();
 
-// Multer setup
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "public/images"); // Directory to save uploaded files
+        cb(null, "public/images");
     },
     filename: (req, file, cb) => {
         cb(null, file.originalname);
@@ -72,9 +71,9 @@ const checkAdmin = (req, res, next) => {
 
 // Middleware: Form validation
 const validateRegistration = (req, res, next) => {
-    const { first_name, last_name, email, password, address, contact, dob, role, gender } = req.body;
+    const { username, email, gender, dob, contact, address, password, role } = req.body;
 
-    if (!first_name || !last_name || !email || !password || !address || !contact || !dob || !role || !gender) {
+    if (!username || !email || !gender || !dob || !contact || !address || !role) {
         return res.status(400).send("All fields are required.");
     }
 
@@ -96,9 +95,78 @@ const validateRegistration = (req, res, next) => {
 
 // Routes
 app.get("/", (req, res) => {
-    res.render("index", {user: req.session.user} );
+    res.render("index", {
+        title: "KineGit | Home",
+        user: req.session.user,
+        messages: req.flash("success")
+    });
 });
 
+app.get("/register", (req, res) => {
+    res.render("auth/register", {
+        title: "KineGit | Registration",
+        formData: req.flash("formData")[0],
+        messages: req.flash("error")
+    });
+});
+
+app.post("/register", validateRegistration, (req, res) => {
+
+    const { username, email, gender, dob, contact, address, password, role } = req.body;
+    const sqlCheckUser = "SELECT * FROM members WHERE username = ? OR username = ?";
+    const sqlInsertUser = "INSERT INTO members (username, email, password, contact, dob, role, gender) VALUES (?, ?, SHA1(?), ?, ?, ?, ?";
+
+    db.query(sqlCheckUser, [username, email], (err, results) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Registration failed. Please try again.");
+            return res.redirect("/register");
+        }
+
+        if (results.length > 0) {
+            req.flash("error", "Username or email is already in use.");
+            req.flash("formData", req.body);
+            return res.redirect("/register");
+        }
+    });
+
+    db.query(sqlInsertUser, [username, email, gender, dob, contact, address, password, role], (err, result) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Registration failed. Please try again.");
+            return res.redirect("/register");
+        }
+        req.flash("success", "Registration successful! Please log in.");
+        res.redirect("/login");
+    })
+});
+
+app.get("/login", (req, res) => {
+    res.render("auth/login", {
+        title: "KineGit | Login",
+        errors: req.flash("error"),
+        messages: req.flash("success")
+    });
+});
+
+app.post("/login", (req, res) => {
+    const { email, password } = req.body;
+    const sql = "SELECT * FROM members where email = ? AND password = SHA1(?)"
+
+    if (!email || !password) {
+        req.flash("error", "Login failed. All fields are required.");
+        return res.redirect("/login");
+    }
+
+    if (results.length > 0) {
+        req.session.user = results[0];
+        req.flash("success", "Login successful!");
+        return res.redirect("");
+    } else {
+        req.flash("error", "Invalid email or password.");
+        return res.redirect("/login");
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {console.log(`Server running on http://localhost:${PORT}`)});
