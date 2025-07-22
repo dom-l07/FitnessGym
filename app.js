@@ -83,6 +83,14 @@ const validateRegistration = (req, res, next) => {
         req.flash("formData", req.body);
         return res.redirect("/register");
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        req.flash("error", "Please enter a valid email address")
+        req.flash("formData", req.body);
+        return res.redirect("/register")
+    }
+
     next();
 };
 
