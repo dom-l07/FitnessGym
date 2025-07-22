@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
 	<div class="container">
 		<a class="navbar-brand fw-bold" href="/">KineGit</a>
 
@@ -9,34 +9,25 @@
 		<div class="collapse navbar-collapse" id="navbarNav">
 			<ul class="navbar-nav ms-auto">
 				<li class="nav-item">
-					<a class="nav-link" href="/">Home</a>
+					<a class="nav-link" href="/locations">Locations</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="/">2</a>
+					<a class="nav-link" href="/rooms">Rooms</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="/">3</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="/">4</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="/">5</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="/">6</a>
+					<a class="nav-link" href="/classes">Classes</a>
 				</li>
 
-				<% if (user) { %>
+				<% if (typeof user !== 'undefined' && user) { %>
 				    <li class="nav-item">
-                        <a class="nav-link" href="/">1</a>
+                        <a class="nav-link" href="/bookings">Bookings</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/">2</a>
+                        <a class="nav-link" href="/billings">Billings</a>
                     </li>
 				<% if (user.role === 'admin') { %>
                     <li class="nav-item">
-                        <a class="nav-link text-warning" href="/admin/dashboard">Dashboard</a>
+                        <a class="nav-link text-warning" href="/dashboard">Dashboard</a>
                     </li>
                     <% } %>
                     <li class="nav-item dropdown">
@@ -44,8 +35,6 @@
                             <%= user.username %>
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-                            <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <a class="dropdown-item text-danger" href="/logout">Logout</a>
                             </li>
@@ -53,12 +42,10 @@
                     </li>
 				<% } else { %>
                     <li class="nav-item">
-                        <a class="nav-link" href="/login">Login</a>
+                        <a class="btn btn-success ms-2 px-3" href="/register">Sign Up</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-outline-light ms-2 px-3" href="/register">
-                            Sign Up
-                        </a>
+                        <a class="btn btn-outline-light ms-2 px-3" href="/login">Login</a>
                     </li>
 				<% } %>
 			</ul>

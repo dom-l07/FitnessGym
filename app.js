@@ -73,8 +73,10 @@ const checkAdmin = (req, res, next) => {
 const validateRegistration = (req, res, next) => {
     const { username, email, gender, dob, contact, address, password, role } = req.body;
 
-    if (!username || !email || !gender || !dob || !contact || !address || !role) {
-        return res.status(400).send("All fields are required.");
+    if (!username || !email || !gender || !dob || !contact || !address || !password || !role) {
+        req.flash("error", "All fields are required.");
+        req.flash("formData", req.body);
+        return res.redirect("/register");
     }
 
     if (password.length < 8) {
@@ -102,19 +104,82 @@ app.get("/", (req, res) => {
     });
 });
 
+// Public pages (accessible without login)
+app.get("/locations", (req, res) => {
+    res.render("locations", {
+        title: "KineGit | Locations",
+        user: req.session.user || null,
+        messages: req.flash("success")
+    });
+});
+
+app.get("/rooms", (req, res) => {
+    res.render("rooms", {
+        title: "KineGit | Rooms",
+        user: req.session.user || null,
+        messages: req.flash("success")
+    });
+});
+
+app.get("/classes", (req, res) => {
+    res.render("classes", {
+        title: "KineGit | Classes",
+        user: req.session.user || null,
+        messages: req.flash("success")
+    });
+});
+
+// Protected pages (require login)
+app.get("/bookings", checkAuthenticated, (req, res) => {
+    res.render("bookings", {
+        title: "KineGit | My Bookings",
+        user: req.session.user,
+        messages: req.flash("success")
+    });
+});
+
+app.get("/billings", checkAuthenticated, (req, res) => {
+    res.render("billings", {
+        title: "KineGit | Billing & Payments",
+        user: req.session.user,
+        messages: req.flash("success")
+    });
+});
+
+// Admin routes (require login and admin role)
+app.get("/dashboard", checkAuthenticated, checkAdmin, (req, res) => {
+    res.render("admin/dashboard", {
+        title: "KineGit | Admin Dashboard",
+        user: req.session.user,
+        messages: req.flash("success")
+    });
+});
+
+// Logout route
+app.get("/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Error destroying session:", err);
+            req.flash("error", "Logout failed. Please try again.");
+            return res.redirect("/");
+        }
+        res.redirect("/");
+    });
+});
+
 app.get("/register", (req, res) => {
     res.render("auth/register", {
         title: "KineGit | Registration",
-        formData: req.flash("formData")[0],
+        user: req.session.user || null,
+        formData: req.flash("formData")[0] || {},
         messages: req.flash("error")
     });
 });
 
 app.post("/register", validateRegistration, (req, res) => {
-
     const { username, email, gender, dob, contact, address, password, role } = req.body;
-    const sqlCheckUser = "SELECT * FROM members WHERE username = ? OR username = ?";
-    const sqlInsertUser = "INSERT INTO members (username, email, password, contact, dob, role, gender) VALUES (?, ?, SHA1(?), ?, ?, ?, ?";
+    const sqlCheckUser = "SELECT * FROM members WHERE username = ? OR email = ?";
+    const sqlInsertUser = "INSERT INTO members (username, email, password, contact, dob, role, gender, address) VALUES (?, ?, SHA1(?), ?, ?, ?, ?, ?)";
 
     db.query(sqlCheckUser, [username, email], (err, results) => {
         if (err) {
@@ -128,22 +193,24 @@ app.post("/register", validateRegistration, (req, res) => {
             req.flash("formData", req.body);
             return res.redirect("/register");
         }
-    });
 
-    db.query(sqlInsertUser, [username, email, gender, dob, contact, address, password, role], (err, result) => {
-        if (err) {
-            console.error("Database error: ", err);
-            req.flash("error", "Registration failed. Please try again.");
-            return res.redirect("/register");
-        }
-        req.flash("success", "Registration successful! Please log in.");
-        res.redirect("/login");
-    })
+        // Only insert if no existing user found
+        db.query(sqlInsertUser, [username, email, password, contact, dob, role, gender, address], (err, result) => {
+            if (err) {
+                console.error("Database error: ", err);
+                req.flash("error", "Registration failed. Please try again.");
+                return res.redirect("/register");
+            }
+            req.flash("success", "Registration successful! Please log in.");
+            res.redirect("/login");
+        });
+    });
 });
 
 app.get("/login", (req, res) => {
     res.render("auth/login", {
         title: "KineGit | Login",
+        user: req.session.user,
         errors: req.flash("error"),
         messages: req.flash("success")
     });
@@ -151,21 +218,29 @@ app.get("/login", (req, res) => {
 
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
-    const sql = "SELECT * FROM members where email = ? AND password = SHA1(?)"
+    const sql = "SELECT * FROM members where email = ? AND password = SHA1(?)";
 
     if (!email || !password) {
         req.flash("error", "Login failed. All fields are required.");
         return res.redirect("/login");
     }
 
-    if (results.length > 0) {
-        req.session.user = results[0];
-        req.flash("success", "Login successful!");
-        return res.redirect("");
-    } else {
-        req.flash("error", "Invalid email or password.");
-        return res.redirect("/login");
-    }
+    db.query(sql, [email, password], (err, results) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Login failed. Please try again.");
+            return res.redirect("/login");
+        }
+
+        if (results.length > 0) {
+            req.session.user = results[0];
+            req.flash("success", "Login successful!");
+            return res.redirect("/");
+        } else {
+            req.flash("error", "Invalid email or password.");
+            return res.redirect("/login");
+        }
+    });
 });
 
 const PORT = process.env.PORT || 3000;
