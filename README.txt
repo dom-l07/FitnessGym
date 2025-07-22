@@ -142,8 +142,7 @@ FitnessGym/
 - Billing system integration
 
 ### BLOCKING:
-- Database scripts need to be created
-- Environment configuration setup
+- Dummy data not added
 - Testing and validation
 
 ## Dependencies
