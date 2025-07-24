@@ -85,8 +85,10 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="mb-3">
-                                                <img src="https://via.placeholder.com/300x200/<%= typeInfo.color === 'warning' ? 'ffc107/000000' : typeInfo.color === 'danger' ? 'dc3545/ffffff' : typeInfo.color === 'success' ? '28a745/ffffff' : '007bff/ffffff' %>?text=<%= encodeURIComponent(room.room_name + ' Room') %>" 
-                                                     alt="<%= room.room_name %> Room" class="img-fluid rounded">
+                                                <img src="/images/roomsImg/<%= room.room_name.toLowerCase() %>/<%= room.image %>" 
+                                                     alt="<%= room.room_name %> Room" 
+                                                     class="img-fluid rounded" 
+                                                     style="height: 200px; width: 100%; object-fit: cover;">
                                             </div>
                                             
                                             <div class="mb-3">
@@ -163,38 +165,38 @@
                         </h3>
                         <div class="row g-4">
                             <div class="col-md-3">
-                                <div class="card border-0 shadow-sm bg-light">
-                                    <div class="card-body text-center">
+                                <div class="card border-0 shadow-sm bg-light h-100">
+                                    <div class="card-body text-center d-flex flex-column">
                                         <div class="display-6 text-danger mb-3">❤️</div>
                                         <h6 class="card-title">Cardio Zone</h6>
-                                        <p class="card-text small">Premium cardio equipment with entertainment systems and heart rate monitoring.</p>
+                                        <p class="card-text small flex-grow-1">Premium cardio equipment with entertainment systems and heart rate monitoring.</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="card border-0 shadow-sm bg-light">
-                                    <div class="card-body text-center">
+                                <div class="card border-0 shadow-sm bg-light h-100">
+                                    <div class="card-body text-center d-flex flex-column">
                                         <div class="display-6 text-warning mb-3">💪</div>
                                         <h6 class="card-title">Strength Training</h6>
-                                        <p class="card-text small">Complete range of free weights and resistance machines for all fitness levels.</p>
+                                        <p class="card-text small flex-grow-1">Complete range of free weights and resistance machines for all fitness levels.</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="card border-0 shadow-sm bg-light">
-                                    <div class="card-body text-center">
+                                <div class="card border-0 shadow-sm bg-light h-100">
+                                    <div class="card-body text-center d-flex flex-column">
                                         <div class="display-6 text-success mb-3">🎵</div>
                                         <h6 class="card-title">Group Fitness</h6>
-                                        <p class="card-text small">Spacious studios with professional sound systems and mirrored walls.</p>
+                                        <p class="card-text small flex-grow-1">Spacious studios with professional sound systems and mirrored walls.</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="card border-0 shadow-sm bg-light">
-                                    <div class="card-body text-center">
+                                <div class="card border-0 shadow-sm bg-light h-100">
+                                    <div class="card-body text-center d-flex flex-column">
                                         <div class="display-6 text-info mb-3">🌡️</div>
                                         <h6 class="card-title">Climate Control</h6>
-                                        <p class="card-text small">Optimal temperature and air quality maintained in all facilities.</p>
+                                        <p class="card-text small flex-grow-1">Optimal temperature and air quality maintained in all facilities.</p>
                                     </div>
                                 </div>
                             </div>

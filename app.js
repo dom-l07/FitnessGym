@@ -172,7 +172,7 @@ app.get("/", (req, res) => {
                 SELECT 
                     (SELECT COUNT(*) FROM locations) as totalLocations,
                     (SELECT COUNT(*) FROM classes WHERE class_start_time > NOW()) as totalClasses,
-                    (SELECT COUNT(*) FROM members WHERE role = 'member') as totalMembers
+                    (SELECT COUNT(*) FROM members WHERE role = 'user') as totalMembers
             `;
             
             db.query(sqlStats, (err, stats) => {
@@ -358,7 +358,7 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
     // Check if database connection exists
     if (!db || db.state === 'disconnected') {
         console.error("Database connection not available");
-        return res.render("bookings", renderData);
+        return res.render("afterloginejs/bookings", renderData);
     }
 
     // Get user's bookings with class details
@@ -419,7 +419,7 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
                 renderData.upcomingClasses = upcomingClasses || [];
             }
 
-            res.render("bookings", renderData);
+            res.render("afterloginejs/bookings", renderData);
         });
     });
 });
@@ -565,7 +565,7 @@ app.post("/cancel-booking", checkAuthenticated, (req, res) => {
 });
 
 app.get("/billings", checkAuthenticated, (req, res) => {
-    res.render("billings", {
+    res.render("afterloginejs/billings", {
         title: "KineGit | Billing & Payments",
         user: req.session.user,
         messages: req.flash("success")
@@ -632,7 +632,7 @@ app.get("/userDashboard", checkAuthenticated, (req, res) => {
                     upcomingClasses = [];
                 }
                 
-                res.render("userDashboard", {
+                res.render("afterloginejs/userDashboard", {
                     title: "KineGit | My Dashboard",
                     user: req.session.user,
                     messages: req.flash("success"),
@@ -656,7 +656,7 @@ app.get("/dashboard", checkAuthenticated, checkAdmin, (req, res) => {
 
 // Edit Profile routes (require login)
 app.get("/editProfile", checkAuthenticated, (req, res) => {
-    res.render("editProfile", {
+    res.render("afterloginejs/editProfile", {
         title: "KineGit | Edit Profile",
         user: req.session.user,
         messages: req.flash("success"),
@@ -681,7 +681,7 @@ app.post("/editProfile", (req, res, next) => {
     const userId = req.session.user.id;
     
     // Handle profile picture upload
-    let profilePicture = req.session.user.profile_picture || 'defaultProfilePicture.png';
+    let profilePicture = req.session.user.profile_picture || 'defaultProfilePicture.jpg';
     if (req.file) {
         profilePicture = req.file.filename;
     }
@@ -779,7 +779,7 @@ app.post("/register", validateRegistration, (req, res) => {
         }
 
         // Only insert if no existing user found - include default profile picture
-        db.query(sqlInsertUser, [username, email, password, contact, dob, role, gender, address, "defaultProfilePicture.png"], (err, result) => {
+        db.query(sqlInsertUser, [username, email, password, contact, dob, role, gender, address, "defaultProfilePicture.jpg"], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Registration failed. Please try again.");

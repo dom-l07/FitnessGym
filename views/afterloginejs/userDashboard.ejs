@@ -3,11 +3,12 @@
     <head>
         <title><%= title %></title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
         <link href="/css/style.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     </head>
     <body>
-        <%- include('partials/navbar') %>
+        <%- include('../partials/navbar') %>
 
         <div class="container py-5">
             <div class="row">
@@ -16,12 +17,12 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body text-center">
                             <div class="mb-3">
-                                <img src="/images/<%= user.profile_picture || 'defaultProfilePicture.png' %>" 
+                                <img src="/uploads/profile-pictures/<%= user.profile_picture || 'defaultProfilePicture.jpg' %>" 
                                      alt="Profile" class="rounded-circle" 
                                      style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #007bff;"
-                                     onerror="this.src='https://via.placeholder.com/80x80/007bff/ffffff?text=<%= user.username.charAt(0).toUpperCase() %>'">
+                                     onerror="this.src='/images/defaultProfilePicture.jpg'">
                             </div>
-                            <h5 class="card-title text-light"><%= user.username %></h5>
+                            <h5 class="card-title"><%= user.username %></h5>
                             <p class="card-text text-muted">
                                 <span class="badge bg-primary">Member</span>
                             </p>
@@ -89,16 +90,16 @@
                     <!-- Recent Bookings Section -->
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
+                            <div class="card border-0 shadow-sm" style="height: 400px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Recent Bookings</h5>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body d-flex flex-column">
                                     <% if (bookings && bookings.length > 0) { %>
                                         <% bookings.forEach(function(booking) { %>
                                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                                 <div>
-                                                    <h6 class="mb-1 text-light"><%= booking.class_name %></h6>
+                                                    <h6 class="mb-1"><%= booking.class_name %></h6>
                                                     <small class="text-muted">
                                                         <i class="bi bi-geo-alt me-1"></i><%= booking.location_name %> - <%= booking.room_name %>
                                                     </small><br>
@@ -111,11 +112,11 @@
                                                 </span>
                                             </div>
                                         <% }); %>
-                                        <div class="text-center mt-3">
+                                        <div class="text-center mt-auto">
                                             <a href="/bookings" class="btn btn-outline-primary">View All Bookings</a>
                                         </div>
                                     <% } else { %>
-                                        <div class="text-center py-4">
+                                        <div class="text-center py-4 d-flex flex-column justify-content-center flex-fill">
                                             <div class="display-6 text-muted mb-3">📅</div>
                                             <h6 class="text-muted">No bookings yet</h6>
                                             <p class="text-muted">Book your first class to get started!</p>
@@ -128,17 +129,17 @@
 
                         <!-- Available Classes Section -->
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
+                            <div class="card border-0 shadow-sm" style="height: 400px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Available Classes</h5>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body d-flex flex-column">
                                     <% if (upcomingClasses && upcomingClasses.length > 0) { %>
                                         <% upcomingClasses.forEach(function(classItem, index) { %>
                                             <% if (index < 3) { %>
                                                 <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                                     <div>
-                                                        <h6 class="mb-1 text-light"><%= classItem.class_name %></h6>
+                                                        <h6 class="mb-1"><%= classItem.class_name %></h6>
                                                         <small class="text-muted">
                                                             <i class="bi bi-person me-1"></i><%= classItem.instructor_name %>
                                                         </small><br>
@@ -147,17 +148,17 @@
                                                         </small>
                                                     </div>
                                                     <div class="text-end">
-                                                        <span class="badge bg-info mb-1"><%= classItem.available_spots %> spots</span><br>
+                                                        <span class="badge bg-info mb-1"><%= classItem.available_spots %> spots left</span><br>
                                                         <button class="btn btn-sm btn-primary">Book</button>
                                                     </div>
                                                 </div>
                                             <% } %>
                                         <% }); %>
-                                        <div class="text-center mt-3">
+                                        <div class="text-center mt-auto">
                                             <a href="/classes" class="btn btn-outline-success">View All Classes</a>
                                         </div>
                                     <% } else { %>
-                                        <div class="text-center py-4">
+                                        <div class="text-center py-4 d-flex flex-column justify-content-center flex-fill">
                                             <div class="display-6 text-muted mb-3">🏋️</div>
                                             <h6 class="text-muted">No upcoming classes</h6>
                                             <p class="text-muted">Check back later for new classes!</p>
@@ -172,29 +173,29 @@
                     <div class="row g-4 mt-2">
                         <!-- Quick Actions -->
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
+                            <div class="card border-0 shadow-sm" style="height: 300px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
                                 </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <div class="row g-4">
                                         <div class="col-6">
-                                            <a href="/classes" class="btn btn-outline-primary w-100">
+                                            <a href="/classes" class="btn btn-outline-primary w-100 py-3 fs-5">
                                                 <i class="bi bi-plus-circle me-2"></i>Book Class
                                             </a>
                                         </div>
                                         <div class="col-6">
-                                            <a href="/locations" class="btn btn-outline-success w-100">
+                                            <a href="/locations" class="btn btn-outline-success w-100 py-3 fs-5">
                                                 <i class="bi bi-geo-alt me-2"></i>Find Location
                                             </a>
                                         </div>
                                         <div class="col-6">
-                                            <a href="/bookings" class="btn btn-outline-warning w-100">
+                                            <a href="/bookings" class="btn btn-outline-warning w-100 py-3 fs-5">
                                                 <i class="bi bi-calendar me-2"></i>My Schedule
                                             </a>
                                         </div>
                                         <div class="col-6">
-                                            <a href="/billings" class="btn btn-outline-info w-100">
+                                            <a href="/billings" class="btn btn-outline-info w-100 py-3 fs-5">
                                                 <i class="bi bi-credit-card me-2"></i>Billing
                                             </a>
                                         </div>
@@ -205,11 +206,11 @@
 
                         <!-- Recent Billing -->
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm">
+                            <div class="card border-0 shadow-sm" style="height: 300px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Recent Billing</h5>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body d-flex flex-column">
                                     <% if (billings && billings.length > 0) { %>
                                         <% billings.forEach(function(bill) { %>
                                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
@@ -224,11 +225,11 @@
                                                 </span>
                                             </div>
                                         <% }); %>
-                                        <div class="text-center mt-3">
+                                        <div class="text-center mt-auto">
                                             <a href="/billings" class="btn btn-outline-warning">View All Bills</a>
                                         </div>
                                     <% } else { %>
-                                        <div class="text-center py-4">
+                                        <div class="text-center py-4 d-flex flex-column justify-content-center flex-fill">
                                             <div class="display-6 text-muted mb-3">💳</div>
                                             <h6 class="text-muted">No billing history</h6>
                                             <p class="text-muted">Your payment history will appear here</p>
