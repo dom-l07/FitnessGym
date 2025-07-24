@@ -106,10 +106,10 @@ INSERT INTO `classes` (room_id, location_id, class_name, class_type, instructor_
 (1, 1, "Run & Done", "Cardio", "Mrs Joanana", "2025-08-02 14:30:00", "2025-08-02 16:30:00", 30),
 (2, 2, "Lift to Live", "Strength", "Mr Joshua", "2025-08-07 17:00:00", "2025-08-07 18:30:00", 25),
 (3, 3, "Zumba Singa", "Zumba", "Mrs Lau", "2025-08-20 10:45:00", "2025-08-20 13:00:00", 40),
-(1, 1, "Zumba Roomba", "Zumba", "Mrs Tan", "2025-09-22 18:30:00", "2025-08-02 20:30:00", 30),
-(2, 2, "Feel the Burn", "Cardio", "Mr Thomas", "2025-08-17 15:00:00", "2025-08-07 16:30:00", 25),
-(3, 3, "Dominate the Game", "Strength", "Mr Toh", "2025-09-03 12:00:00", "2025-08-20 13:30:00", 15),
-(8, 4, "Super Legs", "Cardio", "Mrs Thomson", "2025-09-02 14:30:00", "2025-08-02 16:30:00", 30),
+(1, 1, "Zumba Roomba", "Zumba", "Mrs Tan", "2025-09-22 18:30:00", "2025-09-22 20:30:00", 30),
+(2, 2, "Feel the Burn", "Cardio", "Mr Thomas", "2025-08-17 15:00:00", "2025-08-17 16:30:00", 25),
+(3, 3, "Dominate the Game", "Strength", "Mr Toh", "2025-09-03 12:00:00", "2025-09-03 13:30:00", 15),
+(8, 4, "Super Legs", "Cardio", "Mrs Thomson", "2025-09-02 14:30:00", "2025-09-02 16:30:00", 30),
 (9, 4, "Superhuman Strength", "Strength", "Mr Joshua", "2025-08-07 17:00:00", "2025-08-07 18:30:00", 25),
 (12, 5, "Bim Bam Boom", "Zumba", "Mrs Liu", "2025-08-20 10:45:00", "2025-08-20 13:00:00", 40),
-(12, 5, "Zoom Zoom", "Zumba", "Mrs Lim", "2025-09-22 18:30:00", "2025-09-08 20:30:00", 30);
+(12, 5, "Zoom Zoom", "Zumba", "Mrs Lim", "2025-09-22 18:30:00", "2025-09-22 20:30:00", 30);
