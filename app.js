@@ -9,7 +9,7 @@ const app = express();
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "public/images");
+        cb(null, "public/uploads/profile-pictures");
     },
     filename: (req, file, cb) => {
         // Generate unique filename for profile pictures
@@ -113,10 +113,78 @@ const validateRegistration = (req, res, next) => {
 
 // Routes
 app.get("/", (req, res) => {
-    res.render("index", {
+    // Default render data
+    const renderData = {
         title: "KineGit | Home",
         user: req.session.user,
-        messages: req.flash("success")
+        messages: req.flash("success"),
+        locations: [],
+        upcomingClasses: [],
+        stats: {
+            totalLocations: 0,
+            totalClasses: 0,
+            totalMembers: 0
+        }
+    };
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        console.error("Database connection not available");
+        return res.render("index", renderData);
+    }
+
+    // Get locations for display
+    const sqlLocations = "SELECT * FROM locations ORDER BY name LIMIT 3";
+    db.query(sqlLocations, (err, locations) => {
+        if (err) {
+            console.error("Database error (locations): ", err);
+        } else {
+            renderData.locations = locations || [];
+        }
+
+        // Get upcoming classes for preview
+        const sqlUpcomingClasses = `
+            SELECT c.*, l.name as location_name, r.room_name,
+                   (c.max_participants - COALESCE(booking_count.count, 0)) as available_spots
+            FROM classes c
+            JOIN locations l ON c.location_id = l.location_id
+            JOIN rooms r ON c.room_id = r.room_id
+            LEFT JOIN (
+                SELECT class_id, COUNT(*) as count 
+                FROM bookings 
+                WHERE status = 'Booked' 
+                GROUP BY class_id
+            ) booking_count ON c.class_id = booking_count.class_id
+            WHERE c.class_start_time > NOW()
+            ORDER BY c.class_start_time ASC
+            LIMIT 3
+        `;
+        
+        db.query(sqlUpcomingClasses, (err, upcomingClasses) => {
+            if (err) {
+                console.error("Database error (upcoming classes): ", err);
+            } else {
+                renderData.upcomingClasses = upcomingClasses || [];
+            }
+
+            // Get basic stats
+            const sqlStats = `
+                SELECT 
+                    (SELECT COUNT(*) FROM locations) as totalLocations,
+                    (SELECT COUNT(*) FROM classes WHERE class_start_time > NOW()) as totalClasses,
+                    (SELECT COUNT(*) FROM members WHERE role = 'member') as totalMembers
+            `;
+            
+            db.query(sqlStats, (err, stats) => {
+                if (err) {
+                    console.error("Database error (stats): ", err);
+                } else if (stats && stats[0]) {
+                    renderData.stats = stats[0];
+                }
+
+                res.render("index", renderData);
+            });
+        });
     });
 });
 
@@ -139,27 +207,360 @@ app.get("/locations", (req, res) => {
 });
 
 app.get("/rooms", (req, res) => {
-    res.render("rooms", {
+    const locationFilter = req.query.location;
+    
+    // Default render data
+    const renderData = {
         title: "KineGit | Rooms",
         user: req.session.user || null,
-        messages: req.flash("success")
+        messages: req.flash("success"),
+        rooms: [],
+        locations: [],
+        selectedLocation: locationFilter || null
+    };
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        console.error("Database connection not available");
+        return res.render("rooms", renderData);
+    }
+
+    let sql = `
+        SELECT r.*, l.name as location_name, l.address as location_address 
+        FROM rooms r 
+        JOIN locations l ON r.location_id = l.location_id 
+    `;
+    let queryParams = [];
+
+    if (locationFilter) {
+        sql += " WHERE LOWER(REPLACE(l.name, ' ', '-')) = ?";
+        queryParams.push(locationFilter.toLowerCase());
+    }
+
+    sql += " ORDER BY l.name, r.room_name";
+
+    db.query(sql, queryParams, (err, rooms) => {
+        if (err) {
+            console.error("Database error (rooms): ", err);
+        } else {
+            renderData.rooms = rooms || [];
+        }
+
+        // Get all locations for the filter dropdown
+        const sqlLocations = "SELECT * FROM locations ORDER BY name";
+        db.query(sqlLocations, (err, locations) => {
+            if (err) {
+                console.error("Database error (locations): ", err);
+            } else {
+                renderData.locations = locations || [];
+            }
+
+            res.render("rooms", renderData);
+        });
     });
 });
 
 app.get("/classes", (req, res) => {
-    res.render("classes", {
+    const roomFilter = req.query.room;
+    const locationFilter = req.query.location;
+    
+    // Default render data
+    const renderData = {
         title: "KineGit | Classes",
         user: req.session.user || null,
-        messages: req.flash("success")
+        messages: req.flash("success"),
+        classes: [],
+        rooms: [],
+        locations: [],
+        selectedRoom: roomFilter || null,
+        selectedLocation: locationFilter || null
+    };
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        console.error("Database connection not available");
+        return res.render("classes", renderData);
+    }
+
+    let sql = `
+        SELECT c.*, l.name as location_name, l.address as location_address, r.room_name,
+               (c.max_participants - COALESCE(booking_count.count, 0)) as available_spots
+        FROM classes c
+        JOIN locations l ON c.location_id = l.location_id
+        JOIN rooms r ON c.room_id = r.room_id
+        LEFT JOIN (
+            SELECT class_id, COUNT(*) as count 
+            FROM bookings 
+            WHERE status = 'Booked' 
+            GROUP BY class_id
+        ) booking_count ON c.class_id = booking_count.class_id
+        WHERE 1=1
+    `;
+    let queryParams = [];
+
+    if (roomFilter) {
+        sql += " AND LOWER(r.room_name) = ?";
+        queryParams.push(roomFilter.toLowerCase());
+    }
+
+    if (locationFilter) {
+        sql += " AND LOWER(REPLACE(l.name, ' ', '-')) = ?";
+        queryParams.push(locationFilter.toLowerCase());
+    }
+
+    sql += " ORDER BY c.class_start_time ASC";
+
+    db.query(sql, queryParams, (err, classes) => {
+        if (err) {
+            console.error("Database error (classes): ", err);
+        } else {
+            renderData.classes = classes || [];
+        }
+
+        // Get all rooms for the filter dropdown
+        const sqlRooms = "SELECT r.*, l.name as location_name FROM rooms r JOIN locations l ON r.location_id = l.location_id ORDER BY l.name, r.room_name";
+        db.query(sqlRooms, (err, rooms) => {
+            if (err) {
+                console.error("Database error (rooms): ", err);
+            } else {
+                renderData.rooms = rooms || [];
+            }
+
+            // Get all locations for the filter dropdown
+            const sqlLocations = "SELECT * FROM locations ORDER BY name";
+            db.query(sqlLocations, (err, locations) => {
+                if (err) {
+                    console.error("Database error (locations): ", err);
+                } else {
+                    renderData.locations = locations || [];
+                }
+
+                res.render("classes", renderData);
+            });
+        });
     });
 });
 
 // Protected pages (require login)
 app.get("/bookings", checkAuthenticated, (req, res) => {
-    res.render("bookings", {
+    const userId = req.session.user.member_id || req.session.user.id;
+    
+    // Default render data
+    const renderData = {
         title: "KineGit | My Bookings",
         user: req.session.user,
-        messages: req.flash("success")
+        messages: req.flash("success"),
+        errors: req.flash("error"),
+        bookings: [],
+        upcomingClasses: []
+    };
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        console.error("Database connection not available");
+        return res.render("bookings", renderData);
+    }
+
+    // Get user's bookings with class details
+    const sqlBookings = `
+        SELECT b.*, c.class_name, c.class_type, c.instructor_name, 
+               c.class_start_time, c.class_end_time, c.max_participants,
+               l.name as location_name, l.address as location_address,
+               r.room_name,
+               (c.max_participants - COALESCE(booking_count.count, 0)) as available_spots
+        FROM bookings b
+        JOIN classes c ON b.class_id = c.class_id
+        JOIN locations l ON c.location_id = l.location_id
+        JOIN rooms r ON c.room_id = r.room_id
+        LEFT JOIN (
+            SELECT class_id, COUNT(*) as count 
+            FROM bookings 
+            WHERE status = 'Booked' 
+            GROUP BY class_id
+        ) booking_count ON c.class_id = booking_count.class_id
+        WHERE b.member_id = ?
+        ORDER BY c.class_start_time DESC
+    `;
+
+    db.query(sqlBookings, [userId], (err, bookings) => {
+        if (err) {
+            console.error("Database error (bookings): ", err);
+        } else {
+            renderData.bookings = bookings || [];
+        }
+
+        // Get available classes for booking
+        const sqlUpcomingClasses = `
+            SELECT c.*, l.name as location_name, r.room_name,
+                   (c.max_participants - COALESCE(booking_count.count, 0)) as available_spots,
+                   CASE WHEN user_bookings.booking_id IS NOT NULL THEN 1 ELSE 0 END as user_booked
+            FROM classes c
+            JOIN locations l ON c.location_id = l.location_id
+            JOIN rooms r ON c.room_id = r.room_id
+            LEFT JOIN (
+                SELECT class_id, COUNT(*) as count 
+                FROM bookings 
+                WHERE status = 'Booked' 
+                GROUP BY class_id
+            ) booking_count ON c.class_id = booking_count.class_id
+            LEFT JOIN (
+                SELECT class_id, booking_id
+                FROM bookings 
+                WHERE member_id = ? AND status = 'Booked'
+            ) user_bookings ON c.class_id = user_bookings.class_id
+            WHERE c.class_start_time > NOW()
+            ORDER BY c.class_start_time ASC
+        `;
+
+        db.query(sqlUpcomingClasses, [userId], (err, upcomingClasses) => {
+            if (err) {
+                console.error("Database error (upcoming classes): ", err);
+            } else {
+                renderData.upcomingClasses = upcomingClasses || [];
+            }
+
+            res.render("bookings", renderData);
+        });
+    });
+});
+
+// Book a class
+app.post("/book-class", checkAuthenticated, (req, res) => {
+    const { classId } = req.body;
+    const userId = req.session.user.member_id || req.session.user.id;
+
+    if (!classId) {
+        req.flash("error", "Class ID is required");
+        return res.redirect("/bookings");
+    }
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        req.flash("error", "Database connection not available");
+        return res.redirect("/bookings");
+    }
+
+    // Check if user already booked this class
+    const checkBookingSQL = "SELECT * FROM bookings WHERE member_id = ? AND class_id = ? AND status = 'Booked'";
+    db.query(checkBookingSQL, [userId, classId], (err, existingBookings) => {
+        if (err) {
+            console.error("Database error checking existing booking: ", err);
+            req.flash("error", "Error checking existing bookings");
+            return res.redirect("/bookings");
+        }
+
+        if (existingBookings.length > 0) {
+            req.flash("error", "You have already booked this class");
+            return res.redirect("/bookings");
+        }
+
+        // Check class availability
+        const checkAvailabilitySQL = `
+            SELECT c.*, 
+                   (c.max_participants - COALESCE(booking_count.count, 0)) as available_spots
+            FROM classes c
+            LEFT JOIN (
+                SELECT class_id, COUNT(*) as count 
+                FROM bookings 
+                WHERE status = 'Booked' 
+                GROUP BY class_id
+            ) booking_count ON c.class_id = booking_count.class_id
+            WHERE c.class_id = ? AND c.class_start_time > NOW()
+        `;
+
+        db.query(checkAvailabilitySQL, [classId], (err, classInfo) => {
+            if (err) {
+                console.error("Database error checking availability: ", err);
+                req.flash("error", "Error checking class availability");
+                return res.redirect("/bookings");
+            }
+
+            if (classInfo.length === 0) {
+                req.flash("error", "Class not found or has already started");
+                return res.redirect("/bookings");
+            }
+
+            if (classInfo[0].available_spots <= 0) {
+                req.flash("error", "This class is fully booked");
+                return res.redirect("/bookings");
+            }
+
+            // Create the booking
+            const bookingSQL = "INSERT INTO bookings (member_id, class_id, booking_date, status) VALUES (?, ?, CURDATE(), 'Booked')";
+            db.query(bookingSQL, [userId, classId], (err, result) => {
+                if (err) {
+                    console.error("Database error creating booking: ", err);
+                    req.flash("error", "Error creating booking");
+                    return res.redirect("/bookings");
+                }
+
+                req.flash("success", `Successfully booked ${classInfo[0].class_name}!`);
+                res.redirect("/bookings");
+            });
+        });
+    });
+});
+
+// Cancel a booking
+app.post("/cancel-booking", checkAuthenticated, (req, res) => {
+    const { bookingId } = req.body;
+    const userId = req.session.user.member_id || req.session.user.id;
+
+    if (!bookingId) {
+        req.flash("error", "Booking ID is required");
+        return res.redirect("/bookings");
+    }
+
+    // Check if database connection exists
+    if (!db || db.state === 'disconnected') {
+        req.flash("error", "Database connection not available");
+        return res.redirect("/bookings");
+    }
+
+    // Check if booking belongs to user and can be cancelled
+    const checkBookingSQL = `
+        SELECT b.*, c.class_start_time, c.class_name
+        FROM bookings b
+        JOIN classes c ON b.class_id = c.class_id
+        WHERE b.booking_id = ? AND b.member_id = ? AND b.status = 'Booked'
+    `;
+
+    db.query(checkBookingSQL, [bookingId, userId], (err, bookings) => {
+        if (err) {
+            console.error("Database error checking booking: ", err);
+            req.flash("error", "Error checking booking details");
+            return res.redirect("/bookings");
+        }
+
+        if (bookings.length === 0) {
+            req.flash("error", "Booking not found or already cancelled");
+            return res.redirect("/bookings");
+        }
+
+        const booking = bookings[0];
+        const classStartTime = new Date(booking.class_start_time);
+        const now = new Date();
+        const timeDiff = classStartTime.getTime() - now.getTime();
+        const hoursDiff = timeDiff / (1000 * 3600);
+
+        // Check if class starts within 2 hours (cancellation policy)
+        if (hoursDiff < 2) {
+            req.flash("error", "Cannot cancel booking less than 2 hours before class starts");
+            return res.redirect("/bookings");
+        }
+
+        // Update booking status to cancelled
+        const cancelSQL = "UPDATE bookings SET status = 'Cancelled' WHERE booking_id = ? AND member_id = ?";
+        db.query(cancelSQL, [bookingId, userId], (err, result) => {
+            if (err) {
+                console.error("Database error cancelling booking: ", err);
+                req.flash("error", "Error cancelling booking");
+                return res.redirect("/bookings");
+            }
+
+            req.flash("success", `Successfully cancelled booking for ${booking.class_name}`);
+            res.redirect("/bookings");
+        });
     });
 });
 
@@ -172,7 +573,7 @@ app.get("/billings", checkAuthenticated, (req, res) => {
 });
 
 // User Dashboard route (require login)
-app.get("/user-dashboard", checkAuthenticated, (req, res) => {
+app.get("/userDashboard", checkAuthenticated, (req, res) => {
     // Get user's recent bookings
     const sqlBookings = `
         SELECT b.*, c.class_name, c.class_type, c.instructor_name, 
@@ -213,13 +614,13 @@ app.get("/user-dashboard", checkAuthenticated, (req, res) => {
     `;
     
     // Execute all queries
-    db.query(sqlBookings, [req.session.user.id], (err, bookings) => {
+    db.query(sqlBookings, [req.session.user.member_id || req.session.user.id], (err, bookings) => {
         if (err) {
             console.error("Database error (bookings): ", err);
             bookings = [];
         }
         
-        db.query(sqlBillings, [req.session.user.id], (err, billings) => {
+        db.query(sqlBillings, [req.session.user.member_id || req.session.user.id], (err, billings) => {
             if (err) {
                 console.error("Database error (billings): ", err);
                 billings = [];
