@@ -8,5 +8,155 @@
     </head>
     <body>
         <%- include('partials/navbar') %>
+
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-md-12">
+                    <h1 class="h2 text-primary fw-bold mb-4">Our Locations</h1>
+                    <p class="lead text-light mb-5">Find the KineGit fitness center nearest to you. All our locations feature state-of-the-art equipment and professional trainers to help you achieve your fitness goals.</p>
+                    
+                    <% if (messages && messages.length > 0) { %>
+                        <div class="alert alert-success border-0 rounded-3 mb-4">
+                            <% messages.forEach(function(message) { %>
+                                <p class="mb-0"><i class="bi bi-check-circle-fill me-2"></i><%= message %></p>
+                            <% }); %>
+                        </div>
+                    <% } %>
+
+                    <!-- Location Cards -->
+                    <div class="row g-4">
+                        <% if (locations && locations.length > 0) { %>
+                            <% locations.forEach(function(location, index) { 
+                                const colors = ['primary', 'success', 'warning'];
+                                const colorClasses = ['007bff/ffffff', '28a745/ffffff', 'ffc107/000000'];
+                                const colorClass = colors[index % colors.length];
+                                const imageColor = colorClasses[index % colorClasses.length];
+                                const contactNumbers = ['+65 6555 1234', '+65 6555 2345', '+65 6555 3456'];
+                                const contactNumber = contactNumbers[index % contactNumbers.length];
+                                const locationSlug = location.name.toLowerCase().replace(/\s+/g, '-');
+                            %>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card border-0 shadow-lg h-100">
+                                        <div class="card-header bg-<%= colorClass %> text-<%= colorClass === 'warning' ? 'dark' : 'white' %>">
+                                            <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i><%= location.name %> Branch</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <img src="https://via.placeholder.com/300x200/<%= imageColor %>?text=<%= encodeURIComponent(location.name + ' Branch') %>" 
+                                                     alt="<%= location.name %> Branch" class="img-fluid rounded">
+                                            </div>
+                                            <p class="card-text">
+                                                <i class="bi bi-building me-2 text-<%= colorClass %>"></i>
+                                                <strong>Address:</strong> <%= location.address %>
+                                            </p>
+                                            <p class="card-text">
+                                                <i class="bi bi-clock me-2 text-<%= colorClass === 'warning' ? 'primary' : 'success' %>"></i>
+                                                <strong>Operating Hours:</strong><br>
+                                                Mon-Fri: 6:00 AM - 11:00 PM<br>
+                                                Sat-Sun: 7:00 AM - 10:00 PM
+                                            </p>
+                                            <p class="card-text">
+                                                <i class="bi bi-telephone me-2 text-<%= colorClass === 'primary' ? 'warning' : colorClass === 'success' ? 'warning' : 'success' %>"></i>
+                                                <strong>Contact:</strong> <%= contactNumber %>
+                                            </p>
+                                            <div class="mt-auto">
+                                                <a href="/rooms?location=<%= locationSlug %>" class="btn btn-outline-<%= colorClass %> me-2">View Rooms</a>
+                                                <a href="/classes?location=<%= locationSlug %>" class="btn btn-<%= colorClass %><%= colorClass === 'warning' ? ' text-dark' : '' %>">View Classes</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <!-- Fallback content if no locations found -->
+                            <div class="col-12">
+                                <div class="alert alert-info text-center">
+                                    <h5>Coming Soon!</h5>
+                                    <p class="mb-0">We're currently setting up our locations. Please check back soon for updates.</p>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Features Section -->
+                    <div class="mt-5">
+                        <h3 class="text-light mb-4">Why Choose KineGit?</h3>
+                        <div class="row g-4">
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm bg-light">
+                                    <div class="card-body text-center">
+                                        <div class="display-6 text-primary mb-3">🏋️</div>
+                                        <h6 class="card-title">Modern Equipment</h6>
+                                        <p class="card-text small">State-of-the-art fitness equipment maintained to the highest standards.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm bg-light">
+                                    <div class="card-body text-center">
+                                        <div class="display-6 text-success mb-3">👨‍💼</div>
+                                        <h6 class="card-title">Expert Trainers</h6>
+                                        <p class="card-text small">Certified personal trainers to guide your fitness journey.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm bg-light">
+                                    <div class="card-body text-center">
+                                        <div class="display-6 text-warning mb-3">🕐</div>
+                                        <h6 class="card-title">Flexible Hours</h6>
+                                        <p class="card-text small">Extended operating hours to fit your busy schedule.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm bg-light">
+                                    <div class="card-body text-center">
+                                        <div class="display-6 text-info mb-3">🏆</div>
+                                        <h6 class="card-title">Group Classes</h6>
+                                        <p class="card-text small">Variety of group fitness classes for all fitness levels.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="mt-5">
+                        <div class="card border-0 shadow-lg">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Need Help Finding Us?</h5>
+                            </div>
+                            <div class="card-body bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-dark">Customer Service</h6>
+                                        <p class="text-dark mb-2">
+                                            <i class="bi bi-telephone-fill me-2 text-primary"></i>
+                                            General Inquiries: +65 6555 0000
+                                        </p>
+                                        <p class="text-dark mb-2">
+                                            <i class="bi bi-envelope-fill me-2 text-success"></i>
+                                            Email: info@kinegit.com
+                                        </p>
+                                        <p class="text-dark">
+                                            <i class="bi bi-clock-fill me-2 text-warning"></i>
+                                            Support Hours: Mon-Fri 9:00 AM - 6:00 PM
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-dark">Getting Started</h6>
+                                        <p class="text-dark">New to KineGit? Contact any of our locations for a free consultation and tour. Our staff will help you choose the right membership plan and get you started on your fitness journey.</p>
+                                        <% if (!user) { %>
+                                            <a href="/register" class="btn btn-primary">Join Today</a>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

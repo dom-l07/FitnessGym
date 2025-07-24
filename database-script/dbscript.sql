@@ -1,8 +1,6 @@
 USE `CA2FitnessGym_metdevelop`;
 
--- ------------------------------------------------------------------
 -- Table `members`
--- ------------------------------------------------------------------
 CREATE TABLE `members` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`username` VARCHAR(25) NOT NULL,
@@ -13,20 +11,17 @@ CREATE TABLE `members` (
 	`dob` DATE NOT NULL,
 	`role` ENUM('user', 'admin') DEFAULT 'user',
     `gender` ENUM('Male', 'Female') NOT NULL,
+    `profile_picture` VARCHAR(255) DEFAULT 'defaultProfilePicture.jpg',
 PRIMARY KEY (`id`));
 
--- ------------------------------------------------------------------
 -- Table `locations`
--- ------------------------------------------------------------------
 CREATE TABLE `locations` (
 	`location_id` INT NOT NULL AUTO_INCREMENT,
 	`name` VARCHAR(20) NOT NULL,
 	`address` VARCHAR(255) NOT NULL,
 PRIMARY KEY (`location_id`));
 
--- ------------------------------------------------------------------
 -- Table `rooms`
--- ------------------------------------------------------------------
 CREATE TABLE `rooms` (
 	`room_id` INT NOT NULL AUTO_INCREMENT,
     `location_id` INT NOT NULL,
@@ -35,9 +30,7 @@ CREATE TABLE `rooms` (
 PRIMARY KEY (`room_id`),
 FOREIGN KEY (`location_id`) REFERENCES `locations`(`location_id`));
 
--- ------------------------------------------------------------------
 -- Table `classes`
--- ------------------------------------------------------------------
 CREATE TABLE `classes` (
 	`class_id` INT NOT NULL AUTO_INCREMENT,
     `room_id` INT NOT NULL,
@@ -52,9 +45,7 @@ PRIMARY KEY (`class_id`),
 FOREIGN KEY (`room_id`) REFERENCES `rooms`(`room_id`),
 FOREIGN KEY (`location_id`) REFERENCES `locations`(`location_id`));
 
--- ------------------------------------------------------------------
 -- Table `bookings`
--- ------------------------------------------------------------------
 CREATE TABLE `bookings` (
 	`booking_id` INT NOT NULL AUTO_INCREMENT,
     `member_id` INT NOT NULL,
@@ -65,9 +56,7 @@ PRIMARY KEY (`booking_id`),
 FOREIGN KEY (`member_id`) REFERENCES `members`(`id`),
 FOREIGN KEY (`class_id`) REFERENCES `classes`(`class_id`));
 
--- ------------------------------------------------------------------
 -- Table `billings`
--- ------------------------------------------------------------------
 CREATE TABLE `billings` (
 	`billing_id` INT NOT NULL AUTO_INCREMENT,
     `member_id` INT NOT NULL,
@@ -78,3 +67,27 @@ CREATE TABLE `billings` (
     `payment_method` VARCHAR(50),
 PRIMARY KEY (`billing_id`),
 FOREIGN KEY (`member_id`) REFERENCES `members`(`id`));
+
+
+
+-- --------------------------------------------------------------------------------------
+-- Sample Data
+-- --------------------------------------------------------------------------------------
+INSERT INTO `members` (username, email, password, address, contact, dob, role, gender, profile_picture) VALUES
+("Lebron James", "james@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "1 Woodlands Ave", 87654321, 2025-07-22, "admin", "Male", "defaultProfilePicture.jpg"),
+("Mary Tan", "mary@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "Tampines Ave 1", 98765432, 2022-05-17, "user", "Female", "defaultProfilePicture.jpg");
+
+INSERT INTO `locations` (name, address) VALUES
+("Tampines", "Tampines Ave 2"),
+("Woodlands", "Woodlands Ave 1"),
+("Jurong East", "Jurong East St 21");
+
+INSERT INTO `rooms` (location_id, room_name, capacity) VALUES
+(1, "Cardio", 30),
+(2, "Strength", 25),
+(3, "Zumba", 40);
+
+INSERT INTO `classes` (room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, max_participants) VALUES
+(),
+(),
+();

@@ -14,8 +14,10 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-center">
                         <div class="mb-3">
-                            <img src="https://via.placeholder.com/80x80/007bff/ffffff?text=<%= user.username.charAt(0).toUpperCase() %>" 
-                                 alt="Profile" class="rounded-circle">
+                            <img src="/images/<%= user.profile_picture || 'defaultProfilePicture.png' %>" 
+                                 alt="Profile" class="rounded-circle" 
+                                 style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #007bff;"
+                                 onerror="this.src='https://via.placeholder.com/80x80/007bff/ffffff?text=<%= user.username.charAt(0).toUpperCase() %>'">
                         </div>
                         <h5 class="card-title"><%= user.username %></h5>
                         <p class="card-text text-muted">
