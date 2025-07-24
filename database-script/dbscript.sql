@@ -73,10 +73,10 @@ FOREIGN KEY (`member_id`) REFERENCES `members`(`id`));
 -- Sample Data
 -- --------------------------------------------------------------------------------------
 INSERT INTO `members` (username, email, password, address, contact, dob, role, gender) VALUES
-("Lebron James", "james@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "1 Woodlands Ave", 87654321, 2002-07-22, "admin", "Male"),
-("Mary Tan", "mary@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "Tampines Ave 1", 98765432, 2026-05-17, "user", "Female"),
-("John Lim", "john@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "2 Sembawang Rd", 91234182, 2005-01-20, "user", "Male"),
-("Jamal Song", "jamal@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "1 Novena Square", 95482378, 2000-04-18, "user", "Male");
+("Lebron James", "james@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "1 Woodlands Ave", 87654321, "2002-07-22", "admin", "Male"),
+("Mary Tan", "mary@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "Tampines Ave 1", 98765432, "2026-05-17", "user", "Female"),
+("John Lim", "john@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "2 Sembawang Rd", 91234182, "2005-01-20", "user", "Male"),
+("Jamal Song", "jamal@gmail.com", "7c222fb2927d828af22f592134e8932480637c0d", "1 Novena Square", 95482378, "2000-04-18", "user", "Male");
 
 INSERT INTO `locations` (name, address) VALUES
 ("Tampines", "Tampines Ave 2"),
