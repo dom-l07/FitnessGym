@@ -88,18 +88,18 @@ INSERT INTO `locations` (name, address, image) VALUES
 ("City Hall", "1 Raffles Link", "cityhallBranch.jpg");
 
 INSERT INTO `rooms` (location_id, room_name, capacity, image) VALUES
-(1, "Cardio", 30, "zumbaRoom1.jpg"),
+(1, "Cardio", 30, "cardioRoom1.jpg"),
 (1, "Strength", 25, "strengthRoom1.jpg"),
-(2, "Cardio", 25, "cardioRoom1.jpg"),
+(2, "Cardio", 25, "cardioRoom2.jpg"),
 (2, "Strength", 15, "strengthRoom2.jpg"),
-(2, "Zumba", 30, "zumbaRoom2.jpg"),
+(2, "Zumba", 30, "zumbaRoom1.jpg"),
 (3, "Strength", 20, "strengthRoom3.jpg"),
-(3, "Zumba", 35, "zumbaRoom3.jpg"),
-(4, "Cardio", 25, "cardioRoom2.jpg"),
+(3, "Zumba", 35, "zumbaRoom2.jpg"),
+(4, "Cardio", 25, "cardioRoom3.jpg"),
 (4, "Strength", 20, "strengthRoom4.jpg"),
-(4, "Zumba", 30, "zumbaRoom4.jpg"),
-(5, "Cardio", 20, "cardioRoom3.jpg"),
-(5, "Zumba", 15, "zumbaRoom5.jpg");
+(4, "Zumba", 30, "zumbaRoom3.jpg"),
+(5, "Cardio", 20, "cardioRoom4.jpg"),
+(5, "Zumba", 15, "zumbaRoom4.jpg");
 
 
 INSERT INTO `classes` (room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, max_participants) VALUES
