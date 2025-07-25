@@ -739,6 +739,18 @@ app.post("/editProfile", (req, res, next) => {
     });
 });
 
+app.get("/admin/members", checkAuthenticated, checkAdmin, (req, res) => {
+    res.render("admin/panel/manageMembers");
+});
+
+app.get("/admin/locations", checkAuthenticated, checkAdmin, (req, res) => {
+    res.render("admin/panel/manageLocations");
+});
+
+app.get("/admin/classes", checkAuthenticated, checkAdmin, (req, res) => {
+    res.render("admin/panel/manageClasses");
+});
+
 // Logout route
 app.get("/logout", (req, res) => {
     req.session.destroy((err) => {
