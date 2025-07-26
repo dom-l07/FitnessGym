@@ -14,7 +14,7 @@
             <div class="row">
                 <!-- User Profile Sidebar -->
                 <div class="col-md-3">
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 ">
                         <div class="card-body text-center">
                             <div class="mb-3">
                                 <img src="/uploads/profile-pictures/<%= user.profile_picture || 'defaultProfilePicture.jpg' %>" 
@@ -29,7 +29,6 @@
                             <p class="small text-muted"><%= user.email %></p>
                             <div class="d-grid gap-2">
                                 <a href="/editProfile" class="btn btn-outline-primary btn-sm">Edit Profile</a>
-                                <a href="/bookings" class="btn btn-outline-success btn-sm">View All Bookings</a>
                                 <a href="/billings" class="btn btn-outline-warning btn-sm">Billing History</a>
                             </div>
                         </div>
@@ -54,7 +53,7 @@
                     <!-- Quick Stats Cards -->
                     <div class="row g-4 mb-5">
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-primary text-white">
+                            <div class="card border-0 bg-primary text-white">
                                 <div class="card-body text-center">
                                     <div class="display-6 mb-2">📅</div>
                                     <h5 class="card-title">My Bookings</h5>
@@ -65,7 +64,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-success text-white">
+                            <div class="card border-0 bg-success text-white">
                                 <div class="card-body text-center">
                                     <div class="display-6 mb-2">🏋️</div>
                                     <h5 class="card-title">Available Classes</h5>
@@ -76,7 +75,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-warning text-dark">
+                            <div class="card border-0 bg-warning text-dark">
                                 <div class="card-body text-center">
                                     <div class="display-6 mb-2">💳</div>
                                     <h5 class="card-title">Recent Bills</h5>
@@ -90,7 +89,7 @@
                     <!-- Recent Bookings Section -->
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm" style="height: 400px;">
+                            <div class="card border-0" style="height: 400px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Recent Bookings</h5>
                                 </div>
@@ -129,7 +128,7 @@
 
                         <!-- Available Classes Section -->
                         <div class="col-md-6">
-                            <div class="card border-0 shadow-sm" style="height: 400px;">
+                            <div class="card border-0" style="height: 400px;">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Available Classes</h5>
                                 </div>
@@ -162,77 +161,6 @@
                                             <div class="display-6 text-muted mb-3">🏋️</div>
                                             <h6 class="text-muted">No upcoming classes</h6>
                                             <p class="text-muted">Check back later for new classes!</p>
-                                        </div>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions & Recent Activity -->
-                    <div class="row g-4 mt-2">
-                        <!-- Quick Actions -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm" style="height: 300px;">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
-                                </div>
-                                <div class="card-body d-flex flex-column justify-content-center">
-                                    <div class="row g-4">
-                                        <div class="col-6">
-                                            <a href="/classes" class="btn btn-outline-primary w-100 py-3 fs-5">
-                                                <i class="bi bi-plus-circle me-2"></i>Book Class
-                                            </a>
-                                        </div>
-                                        <div class="col-6">
-                                            <a href="/locations" class="btn btn-outline-success w-100 py-3 fs-5">
-                                                <i class="bi bi-geo-alt me-2"></i>Find Location
-                                            </a>
-                                        </div>
-                                        <div class="col-6">
-                                            <a href="/bookings" class="btn btn-outline-warning w-100 py-3 fs-5">
-                                                <i class="bi bi-calendar me-2"></i>My Schedule
-                                            </a>
-                                        </div>
-                                        <div class="col-6">
-                                            <a href="/billings" class="btn btn-outline-info w-100 py-3 fs-5">
-                                                <i class="bi bi-credit-card me-2"></i>Billing
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Recent Billing -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm" style="height: 300px;">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Recent Billing</h5>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <% if (billings && billings.length > 0) { %>
-                                        <% billings.forEach(function(bill) { %>
-                                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                                <div>
-                                                    <h6 class="mb-1 text-light">$<%= bill.total_amount %></h6>
-                                                    <small class="text-muted">
-                                                        <i class="bi bi-calendar me-1"></i><%= new Date(bill.billing_date).toLocaleDateString() %>
-                                                    </small>
-                                                </div>
-                                                <span class="badge bg-<%= bill.payment_status === 'Paid' ? 'success' : 'warning' %>">
-                                                    <%= bill.payment_status %>
-                                                </span>
-                                            </div>
-                                        <% }); %>
-                                        <div class="text-center mt-auto">
-                                            <a href="/billings" class="btn btn-outline-warning">View All Bills</a>
-                                        </div>
-                                    <% } else { %>
-                                        <div class="text-center py-4 d-flex flex-column justify-content-center flex-fill">
-                                            <div class="display-6 text-muted mb-3">💳</div>
-                                            <h6 class="text-muted">No billing history</h6>
-                                            <p class="text-muted">Your payment history will appear here</p>
                                         </div>
                                     <% } %>
                                 </div>
