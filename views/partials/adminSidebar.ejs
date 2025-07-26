@@ -1,0 +1,45 @@
+<div class="col-md-2">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Admin Panel</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="/dashboard" class="list-group-item list-group-item-action <%= currentPage === 'dashboard' ? 'active' : '' %>">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+            <a href="/admin/members" class="list-group-item list-group-item-action <%= currentPage === 'members' ? 'active' : '' %>">
+                <i class="bi bi-people-fill me-2"></i>Members
+            </a>
+            <a href="/admin/classes" class="list-group-item list-group-item-action <%= currentPage === 'classes' ? 'active' : '' %>">
+                <i class="bi bi-calendar-event me-2"></i>Classes
+            </a>
+            <a href="/admin/locations" class="list-group-item list-group-item-action <%= currentPage === 'locations' ? 'active' : '' %>">
+                <i class="bi bi-geo-alt-fill me-2"></i>Locations
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="bi bi-person-circle me-2"></i>Logged in as</h6>
+        </div>
+        <div class="card-body text-center p-3">
+            <div class="mb-2">
+                <img src="<%= user.profile_picture && user.profile_picture !== 'defaultProfilePicture.jpg' ? '/uploads/profile-pictures/' + user.profile_picture : '/images/defaultProfilePicture.jpg' %>" 
+                     alt="Profile" class="rounded-circle" 
+                     style="width: 60px; height: 60px; object-fit: cover; border: 2px solid #198754;"
+                     onerror="this.src='/images/defaultProfilePicture.jpg'">
+            </div>
+            <h6 class="mb-1"><%= user.username %></h6>
+            <small class="text-muted d-block"><%= user.email %></small>
+            <span class="badge bg-warning text-dark mt-2">
+                <i class="bi bi-shield-fill-check me-1"></i>Administrator
+            </span>
+            <div class="mt-2">
+                <a href="/editProfile" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-gear me-1"></i>Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
