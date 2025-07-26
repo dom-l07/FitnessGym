@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title || 'KineGit | Manage Classes' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <%- include('../../partials/navbar') %>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <%- include('../../partials/adminSidebar', { currentPage: 'classes' }) %>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <!-- Success/Error Messages -->
+                <% if (messages && messages.length > 0) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <%= messages[0] %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                <% if (errors && errors.length > 0) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <%= errors[0] %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-primary fw-bold mb-0">
+                        <i class="bi bi-calendar-event me-2"></i>Class Management
+                    </h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassModal">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Class
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search classes...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="locationFilter">
+                                    <option value="">All Locations</option>
+                                    <% if (locations && locations.length > 0) { %>
+                                        <% locations.forEach(location => { %>
+                                            <option value="<%= location.location_id %>"><%= location.name %></option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="typeFilter">
+                                    <option value="">All Types</option>
+                                    <option value="Cardio">Cardio</option>
+                                    <option value="Strength">Strength</option>
+                                    <option value="Zumba">Zumba</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classes table -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 text-primary">
+                            <i class="bi bi-list-ul me-2"></i>All Classes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="classesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Class Details</th>
+                                        <th>Location & Room</th>
+                                        <th>Schedule</th>
+                                        <th>Participants</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (classes && classes.length > 0) { %>
+                                        <% classes.forEach(classItem => { %>
+                                            <tr data-location="<%= classItem.location_id %>" data-type="<%= classItem.class_type %>">
+                                                <td><span class="badge bg-primary">#<%= classItem.class_id %></span></td>
+                                                <td>
+                                                    <div>
+                                                        <strong><%= classItem.class_name %></strong>
+                                                        <br>
+                                                        <span class="badge bg-info"><%= classItem.class_type %></span>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-person-fill me-1"></i><%= classItem.instructor_name %>
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <strong><%= classItem.location_name %></strong>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-door-open me-1"></i><%= classItem.room_name %>
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-calendar3 me-1"></i>
+                                                            <%= new Date(classItem.class_start_time).toLocaleDateString() %>
+                                                        </small>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            <%= new Date(classItem.class_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %> - 
+                                                            <%= new Date(classItem.class_end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %>
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <span class="badge <%= (classItem.booking_count || 0) >= classItem.max_participants ? 'bg-danger' : 'bg-success' %>">
+                                                            <%= classItem.booking_count || 0 %>/<%= classItem.max_participants %>
+                                                        </span>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <%= classItem.max_participants - (classItem.booking_count || 0) %> spots left
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <% 
+                                                        const now = new Date();
+                                                        const classStart = new Date(classItem.class_start_time);
+                                                        const classEnd = new Date(classItem.class_end_time);
+                                                        let status = '';
+                                                        let statusClass = '';
+                                                        
+                                                        if (now > classEnd) {
+                                                            status = 'Completed';
+                                                            statusClass = 'bg-secondary';
+                                                        } else if (now >= classStart && now <= classEnd) {
+                                                            status = 'In Progress';
+                                                            statusClass = 'bg-warning';
+                                                        } else if (classStart > now) {
+                                                            status = 'Upcoming';
+                                                            statusClass = 'bg-success';
+                                                        }
+                                                    %>
+                                                    <span class="badge <%= statusClass %>"><%= status %></span>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="editClass(<%= classItem.class_id %>)" title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(<%= classItem.class_id %>, '<%= classItem.class_name %>')" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <i class="bi bi-calendar-event display-4 text-muted"></i>
+                                                <p class="text-muted mt-2">No classes found</p>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Class Modal -->
+    <div class="modal fade" id="addClassModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Class
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/classes/add" method="POST">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addClassName" class="form-label">Class Name *</label>
+                                    <input type="text" class="form-control" id="addClassName" name="class_name" required maxlength="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addClassType" class="form-label">Class Type *</label>
+                                    <select class="form-select" id="addClassType" name="class_type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="Cardio">Cardio</option>
+                                        <option value="Strength">Strength</option>
+                                        <option value="Zumba">Zumba</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addInstructorName" class="form-label">Instructor Name *</label>
+                                    <input type="text" class="form-control" id="addInstructorName" name="instructor_name" required maxlength="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addMaxParticipants" class="form-label">Max Participants *</label>
+                                    <input type="number" class="form-control" id="addMaxParticipants" name="max_participants" required min="1" max="100">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addLocation" class="form-label">Location *</label>
+                                    <select class="form-select" id="addLocation" name="location_id" required onchange="loadRooms(this.value, 'addRoom')">
+                                        <option value="">Select Location</option>
+                                        <% if (locations && locations.length > 0) { %>
+                                            <% locations.forEach(location => { %>
+                                                <option value="<%= location.location_id %>"><%= location.name %></option>
+                                            <% }); %>
+                                        <% } %>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addRoom" class="form-label">Room *</label>
+                                    <select class="form-select" id="addRoom" name="room_id" required>
+                                        <option value="">Select Location First</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addStartTime" class="form-label">Start Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="addStartTime" name="class_start_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addEndTime" class="form-label">End Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="addEndTime" name="class_end_time" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add Class
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Class Modal -->
+    <div class="modal fade" id="editClassModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>Edit Class
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editClassForm" method="POST">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editClassName" class="form-label">Class Name *</label>
+                                    <input type="text" class="form-control" id="editClassName" name="class_name" required maxlength="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editClassType" class="form-label">Class Type *</label>
+                                    <select class="form-select" id="editClassType" name="class_type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="Cardio">Cardio</option>
+                                        <option value="Strength">Strength</option>
+                                        <option value="Zumba">Zumba</option>
+                                        <option value="Yoga">Yoga</option>
+                                        <option value="Pilates">Pilates</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editInstructorName" class="form-label">Instructor Name *</label>
+                                    <input type="text" class="form-control" id="editInstructorName" name="instructor_name" required maxlength="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editMaxParticipants" class="form-label">Max Participants *</label>
+                                    <input type="number" class="form-control" id="editMaxParticipants" name="max_participants" required min="1" max="100">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editLocation" class="form-label">Location *</label>
+                                    <select class="form-select" id="editLocation" name="location_id" required onchange="loadRooms(this.value, 'editRoom')">
+                                        <option value="">Select Location</option>
+                                        <% if (locations && locations.length > 0) { %>
+                                            <% locations.forEach(location => { %>
+                                                <option value="<%= location.location_id %>"><%= location.name %></option>
+                                            <% }); %>
+                                        <% } %>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editRoom" class="form-label">Room *</label>
+                                    <select class="form-select" id="editRoom" name="room_id" required>
+                                        <option value="">Select Location First</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editStartTime" class="form-label">Start Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="editStartTime" name="class_start_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editEndTime" class="form-label">End Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="editEndTime" name="class_end_time" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Class
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteClassModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the class "<span id="deleteClassName"></span>"?</p>
+                    <p class="text-danger"><strong>Warning:</strong> This action cannot be undone and will also cancel all associated bookings.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteClassForm" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Delete Class
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search and filter functionality
+        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+        document.getElementById('locationFilter').addEventListener('change', filterTable);
+        document.getElementById('typeFilter').addEventListener('change', filterTable);
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const locationFilter = document.getElementById('locationFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            const tableRows = document.querySelectorAll('#classesTable tbody tr[data-location]');
+            
+            tableRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowLocation = row.getAttribute('data-location');
+                const rowType = row.getAttribute('data-type');
+                
+                const matchesSearch = text.includes(searchTerm);
+                const matchesLocation = !locationFilter || rowLocation === locationFilter;
+                const matchesType = !typeFilter || rowType === typeFilter;
+                
+                row.style.display = (matchesSearch && matchesLocation && matchesType) ? '' : 'none';
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            const tableRows = document.querySelectorAll('#classesTable tbody tr');
+            tableRows.forEach(row => row.style.display = '');
+        }
+
+        function loadRooms(locationId, roomSelectId) {
+            const roomSelect = document.getElementById(roomSelectId);
+            roomSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            if (!locationId) {
+                roomSelect.innerHTML = '<option value="">Select Location First</option>';
+                return;
+            }
+            
+            fetch(`/admin/locations/${locationId}/rooms`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        roomSelect.innerHTML = '<option value="">Select Room</option>';
+                        data.rooms.forEach(room => {
+                            roomSelect.innerHTML += `<option value="${room.room_id}">${room.room_name} (Capacity: ${room.capacity})</option>`;
+                        });
+                    } else {
+                        roomSelect.innerHTML = '<option value="">No rooms available</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    roomSelect.innerHTML = '<option value="">Error loading rooms</option>';
+                });
+        }
+
+        function editClass(classId) {
+            fetch(`/admin/classes/${classId}/edit-data`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const classItem = data.class;
+                        
+                        document.getElementById('editClassName').value = classItem.class_name;
+                        document.getElementById('editClassType').value = classItem.class_type;
+                        document.getElementById('editInstructorName').value = classItem.instructor_name;
+                        document.getElementById('editMaxParticipants').value = classItem.max_participants;
+                        document.getElementById('editLocation').value = classItem.location_id;
+                        
+                        // Load rooms for selected location
+                        loadRooms(classItem.location_id, 'editRoom');
+                        
+                        // Set the selected room after a short delay to allow rooms to load
+                        setTimeout(() => {
+                            document.getElementById('editRoom').value = classItem.room_id;
+                        }, 500);
+                        
+                        // Format datetime for input fields
+                        const startTime = new Date(classItem.class_start_time);
+                        const endTime = new Date(classItem.class_end_time);
+                        
+                        document.getElementById('editStartTime').value = startTime.toISOString().slice(0, 16);
+                        document.getElementById('editEndTime').value = endTime.toISOString().slice(0, 16);
+                        
+                        document.getElementById('editClassForm').action = `/admin/classes/${classId}/update`;
+                        
+                        new bootstrap.Modal(document.getElementById('editClassModal')).show();
+                    } else {
+                        alert('Error loading class details');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading class details');
+                });
+        }
+
+        function confirmDelete(classId, className) {
+            document.getElementById('deleteClassName').textContent = className;
+            document.getElementById('deleteClassForm').action = `/admin/classes/${classId}/delete`;
+            new bootstrap.Modal(document.getElementById('deleteClassModal')).show();
+        }
+
+        // Set minimum datetime to current time for new classes
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const minDateTime = now.toISOString().slice(0, 16);
+            
+            document.getElementById('addStartTime').min = minDateTime;
+            document.getElementById('addEndTime').min = minDateTime;
+            
+            // Update end time minimum when start time changes
+            document.getElementById('addStartTime').addEventListener('change', function() {
+                document.getElementById('addEndTime').min = this.value;
+            });
+            
+            document.getElementById('editStartTime').addEventListener('change', function() {
+                document.getElementById('editEndTime').min = this.value;
+            });
+        });
+    </script>
+</body>
+</html>

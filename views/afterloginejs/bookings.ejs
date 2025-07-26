@@ -261,7 +261,7 @@
                                                             data-class-name="<%= classItem.class_name %>"
                                                             data-class-date="<%= startDate.toLocaleDateString('en-SG') %>"
                                                             data-class-time="<%= startDate.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' }) %>">
-                                                        <i class="bi bi-calendar-plus me-1"></i>Book Class
+                                                            <i class="bi bi-calendar-plus me-1"></i>Book Class
                                                     </button>
                                                 <% } else { %>
                                                     <button class="btn btn-secondary btn-sm" disabled>
@@ -282,57 +282,6 @@
                         </div>
                     </div>
                     <% } %>
-
-                    <!-- Quick Actions -->
-                    <div class="row g-4 mt-2">
-                        <div class="col-md-4">
-                            <div class="card border-0 bg-primary text-white h-100">
-                                <div class="card-body text-center d-flex flex-column">
-                                    <div class="display-6 mb-3">🏋️‍♂️</div>
-                                    <h5 class="card-title">Browse Classes</h5>
-                                    <p class="card-text">Discover new fitness classes and find the perfect workout for you.</p>
-                                    <div class="mt-auto">
-                                        <a href="/classes" class="btn btn-light">
-                                            <i class="bi bi-search me-2"></i>Browse Now
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <div class="card border-0 bg-success text-white h-100">
-                                <div class="card-body text-center d-flex flex-column">
-                                    <div class="display-6 mb-3">📍</div>
-                                    <h5 class="card-title">Find Locations</h5>
-                                    <p class="card-text">Locate our gym branches and find the most convenient one for you.</p>
-                                    <div class="mt-auto">
-                                        <a href="/locations" class="btn btn-light">
-                                            <i class="bi bi-geo-alt me-2"></i>View Locations
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <div class="card border-0 bg-warning text-dark h-100">
-                                <div class="card-body text-center d-flex flex-column">
-                                    <div class="display-6 mb-3">🏃‍♀️</div>
-                                    <h5 class="card-title">My Dashboard</h5>
-                                    <p class="card-text">View your fitness statistics and track your progress.</p>
-                                    <div class="mt-auto">
-                                        <a href="/userDashboard" class="btn btn-light">
-                                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Cancel Booking Modal -->
         <div class="modal fade" id="cancelModal" tabindex="-1">
@@ -367,11 +316,11 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Book Class</h5>
+                        <h5 class="modal-title text-dark">Book Class</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p>Do you want to book <strong id="bookClassName"></strong>?</p>
+                        <p class="text-dark">Do you want to book <strong id="bookClassName"></strong>?</p>
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
                             <strong>Date:</strong> <span id="bookClassDate"></span><br>

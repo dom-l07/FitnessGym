@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title || 'KineGit | Manage Members' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <%- include('../../partials/navbar') %>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <%- include('../../partials/adminSidebar', { currentPage: 'members' }) %>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-primary fw-bold mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Member Management
+                    </h2>
+                </div>
+
+                <!-- Success/Error Messages -->
+                <% if (typeof messages !== 'undefined' && messages && messages.length > 0) { %>
+                    <div class="alert alert-success border-0 rounded-3 mb-4">
+                        <% messages.forEach(function(message) { %>
+                            <p class="mb-0"><i class="bi bi-check-circle-fill me-2"></i><%= message %></p>
+                        <% }); %>
+                    </div>
+                <% } %>
+
+                <% if (typeof errors !== 'undefined' && errors && errors.length > 0) { %>
+                    <div class="alert alert-danger border-0 rounded-3 mb-4">
+                        <% errors.forEach(function(error) { %>
+                            <p class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i><%= error %></p>
+                        <% }); %>
+                    </div>
+                <% } %>
+
+                <!-- Statistics Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h3 class="fw-bold mb-0"><%= (typeof members !== 'undefined' && members) ? members.length : 0 %></h3>
+                                        <p class="mb-0">Total Members</p>
+                                    </div>
+                                    <i class="bi bi-people-fill fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h3 class="fw-bold mb-0"><%= (typeof members !== 'undefined' && members) ? members.filter(m => m.role === 'user').length : 0 %></h3>
+                                        <p class="mb-0">Active Users</p>
+                                    </div>
+                                    <i class="bi bi-person-check-fill fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h3 class="fw-bold mb-0"><%= (typeof members !== 'undefined' && members) ? members.filter(m => m.role === 'admin').length : 0 %></h3>
+                                        <p class="mb-0">Administrators</p>
+                                    </div>
+                                    <i class="bi bi-shield-fill-check fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="card border-0 mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="searchMembers" class="form-label">Search Members</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchMembers" placeholder="Search by name, email, or username...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterRole" class="form-label">Filter by Role</label>
+                                <select class="form-select" id="filterRole">
+                                    <option value="">All Roles</option>
+                                    <option value="user">Users</option>
+                                    <option value="admin">Administrators</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterGender" class="form-label">Filter by Gender</label>
+                                <select class="form-select" id="filterGender">
+                                    <option value="">All Genders</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label d-block">&nbsp;</label>
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members table -->
+                <div class="card border-0">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-table me-2"></i>Members List</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0" id="membersTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Profile</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Contact</th>
+                                        <th>Gender</th>
+                                        <th>Age</th>
+                                        <th>Role</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (typeof members !== 'undefined' && members && members.length > 0) { %>
+                                        <% members.forEach(function(member) { %>
+                                            <tr>
+                                                <td>
+                                                    <img src="<%= member.profile_picture && member.profile_picture !== 'defaultProfilePicture.jpg' ? '/uploads/profile-pictures/' + member.profile_picture : '/images/defaultProfilePicture.jpg' %>" 
+                                                         alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;"
+                                                         onerror="this.src='/images/defaultProfilePicture.jpg'">
+                                                </td>
+                                                <td class="fw-medium"><%= member.username %></td>
+                                                <td><%= member.email %></td>
+                                                <td><%= member.contact %></td>
+                                                <td>
+                                                    <span class="badge bg-<%= member.gender === 'male' ? 'primary' : member.gender === 'female' ? 'danger' : 'secondary' %>">
+                                                        <%= member.gender.charAt(0).toUpperCase() + member.gender.slice(1) %>
+                                                    </span>
+                                                </td>
+                                                <td><%= new Date().getFullYear() - new Date(member.dob).getFullYear() %></td>
+                                                <td>
+                                                    <span class="badge bg-<%= member.role === 'admin' ? 'warning' : 'success' %>">
+                                                        <i class="bi bi-<%= member.role === 'admin' ? 'shield-fill-check' : 'person-check' %> me-1"></i>
+                                                        <%= member.role.charAt(0).toUpperCase() + member.role.slice(1) %>
+                                                    </span>
+                                                </td>
+                                                <td><%= new Date(member.created_at || Date.now()).toLocaleDateString() %></td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button class="btn btn-outline-primary" title="View Details" 
+                                                                onclick="viewMember('<%= member.id %>')">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-warning" title="Edit Member"
+                                                                onclick="editMember('<%= member.id %>')">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <% if (member.id !== user.id) { %>
+                                                            <button class="btn btn-outline-danger" title="Delete Member"
+                                                                    onclick="confirmDelete('<%= member.id %>', '<%= member.username %>')">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        <% } %>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="9" class="text-center py-5">
+                                                <div class="text-muted">
+                                                    <i class="bi bi-people display-1"></i>
+                                                    <h5 class="mt-3">No members found</h5>
+                                                    <p>No members are currently registered in the system.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Member Modal -->
+    <div class="modal fade" id="viewMemberModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Member Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-dark" id="memberDetailsContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editMemberForm" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body" id="editMemberContent">
+                        <!-- Content will be loaded dynamically -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-save me-2"></i>Update Member
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the member <strong id="deleteMemberName"></strong>?</p>
+                    <p class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Delete Member
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search and filter functionality
+        document.getElementById('searchMembers').addEventListener('input', filterTable);
+        document.getElementById('filterRole').addEventListener('change', filterTable);
+        document.getElementById('filterGender').addEventListener('change', filterTable);
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchMembers').value.toLowerCase();
+            const roleFilter = document.getElementById('filterRole').value;
+            const genderFilter = document.getElementById('filterGender').value;
+            const table = document.getElementById('membersTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.cells.length === 1) continue; // Skip "no members" row
+
+                const name = row.cells[1].textContent.toLowerCase();
+                const email = row.cells[2].textContent.toLowerCase();
+                const gender = row.cells[4].textContent.toLowerCase();
+                const role = row.cells[6].textContent.toLowerCase();
+
+                const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+                const matchesRole = !roleFilter || role.includes(roleFilter);
+                const matchesGender = !genderFilter || gender.includes(genderFilter);
+
+                if (matchesSearch && matchesRole && matchesGender) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('searchMembers').value = '';
+            document.getElementById('filterRole').value = '';
+            document.getElementById('filterGender').value = '';
+            filterTable();
+        }
+
+        function viewMember(memberId) {
+            // Fetch member details and show in modal
+            fetch(`/admin/members/${memberId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const member = data.member;
+                        const content = `
+                            <div class="row g-4">
+                                <div class="col-md-4 text-center">
+                                    <img src="${member.profile_picture && member.profile_picture !== 'defaultProfilePicture.jpg' ? '/uploads/profile-pictures/' + member.profile_picture : '/images/defaultProfilePicture.jpg'}" 
+                                         alt="Profile" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;"
+                                         onerror="this.src='/images/defaultProfilePicture.jpg'">
+                                    <h5>${member.username}</h5>
+                                    <span class="badge bg-${member.role === 'admin' ? 'warning' : 'success'} fs-6">
+                                        ${member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                                    </span>
+                                </div>
+                                <div class="col-md-8">
+                                    <h6 class="text-primary">Personal Information</h6>
+                                    <table class="table table-borderless">
+                                        <tr><td><strong>Email:</strong></td><td>${member.email}</td></tr>
+                                        <tr><td><strong>Contact:</strong></td><td>${member.contact}</td></tr>
+                                        <tr><td><strong>Gender:</strong></td><td>${member.gender.charAt(0).toUpperCase() + member.gender.slice(1)}</td></tr>
+                                        <tr><td><strong>Date of Birth:</strong></td><td>${new Date(member.dob).toLocaleDateString()}</td></tr>
+                                        <tr><td><strong>Age:</strong></td><td>${new Date().getFullYear() - new Date(member.dob).getFullYear()} years</td></tr>
+                                        <tr><td><strong>Address:</strong></td><td>${member.address}</td></tr>
+                                        <tr><td><strong>Member Since:</strong></td><td>${new Date(member.created_at || Date.now()).toLocaleDateString()}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('memberDetailsContent').innerHTML = content;
+                        new bootstrap.Modal(document.getElementById('viewMemberModal')).show();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function editMember(memberId) {
+            // Fetch member details for editing
+            fetch(`/admin/members/${memberId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const member = data.member;
+                        document.getElementById('editMemberForm').action = `/admin/members/${memberId}/update`;
+                        
+                        const content = `
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Username *</label>
+                                    <input type="text" class="form-control" name="username" value="${member.username}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email *</label>
+                                    <input type="email" class="form-control" name="email" value="${member.email}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Contact Number *</label>
+                                    <input type="tel" class="form-control" name="contact" value="${member.contact}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Gender *</label>
+                                    <select class="form-select" name="gender" required>
+                                        <option value="male" ${member.gender === 'male' ? 'selected' : ''}>Male</option>
+                                        <option value="female" ${member.gender === 'female' ? 'selected' : ''}>Female</option>
+                                        <option value="other" ${member.gender === 'other' ? 'selected' : ''}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Date of Birth *</label>
+                                    <input type="date" class="form-control" name="dob" value="${member.dob.split('T')[0]}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Role *</label>
+                                    <select class="form-select" name="role" required>
+                                        <option value="user" ${member.role === 'user' ? 'selected' : ''}>User</option>
+                                        <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Administrator</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Profile Picture</label>
+                                    <input type="file" class="form-control" name="profilePicture" accept="image/*">
+                                    <small class="text-muted">Leave empty to keep current picture</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" class="form-control" name="password" minlength="8">
+                                    <small class="text-muted">Leave empty to keep current password</small>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Address *</label>
+                                    <textarea class="form-control" name="address" rows="3" required>${member.address}</textarea>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('editMemberContent').innerHTML = content;
+                        new bootstrap.Modal(document.getElementById('editMemberModal')).show();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function confirmDelete(memberId, username) {
+            document.getElementById('deleteMemberName').textContent = username;
+            document.getElementById('deleteForm').action = `/admin/members/${memberId}/delete`;
+            new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+        }
+    </script>
+</body>
+</html>

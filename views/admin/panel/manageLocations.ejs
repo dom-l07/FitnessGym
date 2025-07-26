@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title || 'KineGit | Manage Locations' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <%- include('../../partials/navbar') %>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <%- include('../../partials/adminSidebar', { currentPage: 'locations' }) %>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <!-- Success/Error Messages -->
+                <% if (messages && messages.length > 0) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <%= messages[0] %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                <% if (errors && errors.length > 0) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <%= errors[0] %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-primary fw-bold mb-0">
+                        <i class="bi bi-geo-alt-fill me-2"></i>Location Management
+                    </h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Location
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="card border-0 mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search locations...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-outline-secondary" onclick="resetSearch()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locations table -->
+                <div class="card border-0">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0 text-primary">
+                            <i class="bi bi-list-ul me-2"></i>All Locations
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0" id="locationsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Rooms</th>
+                                        <th>Classes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (locations && locations.length > 0) { %>
+                                        <% locations.forEach(location => { %>
+                                            <tr>
+                                                <td><span class="badge bg-primary">#<%= location.location_id %></span></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                            <i class="bi bi-geo-alt-fill text-white"></i>
+                                                        </div>
+                                                        <div>
+                                                            <strong><%= location.name %></strong>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td><%= location.address %></td>
+                                                <td>
+                                                    <span class="badge bg-info"><%= location.room_count || 0 %> rooms</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success"><%= location.class_count || 0 %> classes</span>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewLocation(<%= location.location_id %>)" title="View Details">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="editLocation(<%= location.location_id %>)" title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(<%= location.location_id %>, '<%= location.name %>')" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <i class="bi bi-geo-alt display-4 text-muted"></i>
+                                                <p class="text-muted mt-2">No locations found</p>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Location Modal -->
+    <div class="modal fade" id="addLocationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Location
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/locations/add" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="addLocationName" class="form-label">Location Name *</label>
+                            <input type="text" class="form-control" id="addLocationName" name="name" required maxlength="20">
+                        </div>
+                        <div class="mb-3">
+                            <label for="addLocationAddress" class="form-label">Address *</label>
+                            <textarea class="form-control" id="addLocationAddress" name="address" rows="3" required maxlength="255"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addLocationImage" class="form-label">Location Image</label>
+                            <input type="file" class="form-control" id="addLocationImage" name="locationImage" accept="image/*">
+                            <div class="form-text">Upload an image for this location (optional)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add Location
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Location Modal -->
+    <div class="modal fade" id="editLocationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>Edit Location
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editLocationForm" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editLocationName" class="form-label">Location Name *</label>
+                            <input type="text" class="form-control" id="editLocationName" name="name" required maxlength="20">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editLocationAddress" class="form-label">Address *</label>
+                            <textarea class="form-control" id="editLocationAddress" name="address" rows="3" required maxlength="255"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editLocationImage" class="form-label">Location Image</label>
+                            <input type="file" class="form-control" id="editLocationImage" name="locationImage" accept="image/*">
+                            <div class="form-text">Upload a new image to replace the current one (optional)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Location
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Location Modal -->
+    <div class="modal fade" id="viewLocationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye me-2"></i>Location Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="locationDetailsContent">
+                    <!-- Content loaded via AJAX -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteLocationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the location "<span id="deleteLocationName"></span>"?</p>
+                    <p class="text-danger"><strong>Warning:</strong> This action cannot be undone and will also delete all associated rooms and classes.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteLocationForm" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Delete Location
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#locationstable tbody tr');
+            
+            tableRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        function resetSearch() {
+            document.getElementById('searchInput').value = '';
+            const tableRows = document.querySelectorAll('#locationstable tbody tr');
+            tableRows.forEach(row => row.style.display = '');
+        }
+
+        function viewLocation(locationId) {
+            fetch(`/admin/locations/${locationId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const location = data.location;
+                        const rooms = data.rooms || [];
+                        const classes = data.classes || [];
+                        
+                        let roomsHtml = '';
+                        if (rooms.length > 0) {
+                            roomsHtml = rooms.map(room => 
+                                `<div class="col-md-6 mb-2">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-2">
+                                            <h6 class="mb-1">${room.room_name}</h6>
+                                            <small class="text-muted">Capacity: ${room.capacity}</small>
+                                        </div>
+                                    </div>
+                                </div>`
+                            ).join('');
+                        } else {
+                            roomsHtml = '<p class="text-muted">No rooms available</p>';
+                        }
+
+                        let classesHtml = '';
+                        if (classes.length > 0) {
+                            classesHtml = classes.map(cls => 
+                                `<div class="col-md-6 mb-2">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-2">
+                                            <h6 class="mb-1">${cls.class_name}</h6>
+                                            <small class="text-muted">${cls.class_type} - ${cls.instructor_name}</small>
+                                        </div>
+                                    </div>
+                                </div>`
+                            ).join('');
+                        } else {
+                            classesHtml = '<p class="text-muted">No classes scheduled</p>';
+                        }
+
+                        document.getElementById('locationDetailsContent').innerHTML = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Location Information</h6>
+                                    <p><strong>Name:</strong> ${location.name}</p>
+                                    <p><strong>Address:</strong> ${location.address}</p>
+                                    <p><strong>ID:</strong> #${location.location_id}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Statistics</h6>
+                                    <p><strong>Total Rooms:</strong> ${rooms.length}</p>
+                                    <p><strong>Total Classes:</strong> ${classes.length}</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6>Rooms</h6>
+                            <div class="row">${roomsHtml}</div>
+                            <hr>
+                            <h6>Classes</h6>
+                            <div class="row">${classesHtml}</div>
+                        `;
+                        
+                        new bootstrap.Modal(document.getElementById('viewLocationModal')).show();
+                    } else {
+                        alert('Error loading location details');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading location details');
+                });
+        }
+
+        function editLocation(locationId) {
+            fetch(`/admin/locations/${locationId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const location = data.location;
+                        document.getElementById('editLocationName').value = location.name;
+                        document.getElementById('editLocationAddress').value = location.address;
+                        document.getElementById('editLocationForm').action = `/admin/locations/${locationId}/update`;
+                        
+                        new bootstrap.Modal(document.getElementById('editLocationModal')).show();
+                    } else {
+                        alert('Error loading location details');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading location details');
+                });
+        }
+
+        function confirmDelete(locationId, locationName) {
+            document.getElementById('deleteLocationName').textContent = locationName;
+            document.getElementById('deleteLocationForm').action = `/admin/locations/${locationId}/delete`;
+            new bootstrap.Modal(document.getElementById('deleteLocationModal')).show();
+        }
+    </script>
+</body>
+</html>
