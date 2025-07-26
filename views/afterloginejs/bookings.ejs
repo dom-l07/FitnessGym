@@ -91,7 +91,7 @@
                                                        booking.status === 'Cancelled' ? 'danger' : 'secondary';
                                 %>
                                     <div class="col-md-6 col-lg-4">
-                                        <div class="card border-0 shadow-sm h-100 booking-card">
+                                        <div class="card border-0 h-100 booking-card">
                                             <div class="card-header bg-<%= typeInfo.color %> text-<%= typeInfo.color === 'warning' ? 'dark' : 'white' %>">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <h6 class="mb-0">
@@ -214,7 +214,7 @@
                                                          classItem.available_spots > 5 ? 'warning' : 'danger';
                             %>
                                 <div class="col-md-6 col-lg-4">
-                                    <div class="card border-0 shadow-sm h-100 booking-card">
+                                    <div class="card border-0 h-100 booking-card">
                                         <div class="card-header bg-<%= typeInfo.color %> text-<%= typeInfo.color === 'warning' ? 'dark' : 'white' %>">
                                             <h6 class="mb-0">
                                                 <i class="<%= typeInfo.icon %> me-2"></i><%= classItem.class_name %>
@@ -286,7 +286,7 @@
                     <!-- Quick Actions -->
                     <div class="row g-4 mt-2">
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                            <div class="card border-0 bg-primary text-white h-100">
                                 <div class="card-body text-center d-flex flex-column">
                                     <div class="display-6 mb-3">🏋️‍♂️</div>
                                     <h5 class="card-title">Browse Classes</h5>
@@ -301,7 +301,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-success text-white h-100">
+                            <div class="card border-0 bg-success text-white h-100">
                                 <div class="card-body text-center d-flex flex-column">
                                     <div class="display-6 mb-3">📍</div>
                                     <h5 class="card-title">Find Locations</h5>
@@ -316,7 +316,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+                            <div class="card border-0 bg-warning text-dark h-100">
                                 <div class="card-body text-center d-flex flex-column">
                                     <div class="display-6 mb-3">🏃‍♀️</div>
                                     <h5 class="card-title">My Dashboard</h5>
