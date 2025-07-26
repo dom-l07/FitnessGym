@@ -57,8 +57,16 @@
                                 <div class="card-body text-center">
                                     <div class="display-6 mb-2">📅</div>
                                     <h5 class="card-title">My Bookings</h5>
-                                    <h3 class="fw-bold"><%= bookings ? bookings.length : 0 %></h3>
-                                    <p class="card-text">Recent bookings</p>
+                                    <h3 class="fw-bold">
+                                        <% 
+                                        let activeBookings = 0;
+                                        if (bookings && bookings.length > 0) {
+                                            activeBookings = bookings.filter(booking => booking.status === 'Booked').length;
+                                        }
+                                        %>
+                                        <%= activeBookings %>
+                                    </h3>
+                                    <p class="card-text">Recent Bookings</p>
                                 </div>
                             </div>
                         </div>
