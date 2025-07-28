@@ -196,6 +196,7 @@ app.get("/locations", (req, res) => {
 
 app.get("/rooms", (req, res) => {
     const locationFilter = req.query.location;
+    const searchQuery = req.query.search ? req.query.search.trim() : '';
     
     const renderData = {
         title: "KineGit | Rooms",
@@ -203,7 +204,8 @@ app.get("/rooms", (req, res) => {
         messages: req.flash("success"),
         rooms: [],
         locations: [],
-        selectedLocation: locationFilter || null
+        selectedLocation: locationFilter || null,
+        searchQuery: searchQuery
     };
 
     if (!db || db.state === 'disconnected') {
@@ -217,10 +219,21 @@ app.get("/rooms", (req, res) => {
         JOIN locations l ON r.location_id = l.location_id 
     `;
     let queryParams = [];
+    let whereConditions = [];
 
     if (locationFilter) {
-        sql += " WHERE LOWER(REPLACE(l.name, ' ', '-')) = ?";
+        whereConditions.push("LOWER(REPLACE(l.name, ' ', '-')) = ?");
         queryParams.push(locationFilter.toLowerCase());
+    }
+
+    if (searchQuery) {
+        whereConditions.push("(LOWER(r.room_name) LIKE ? OR LOWER(l.name) LIKE ?)");
+        const searchTerm = `%${searchQuery.toLowerCase()}%`;
+        queryParams.push(searchTerm, searchTerm);
+    }
+
+    if (whereConditions.length > 0) {
+        sql += " WHERE " + whereConditions.join(" AND ");
     }
 
     sql += " ORDER BY l.name, r.room_name";

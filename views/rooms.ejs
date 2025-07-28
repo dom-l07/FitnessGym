@@ -18,11 +18,73 @@
                     </h1>
                     <p class="lead text-light mb-5">Explore our premium fitness facilities designed to cater to all your workout needs. From cardio zones to strength training areas, find the perfect space for your fitness journey.</p>
                     
+                    <!-- Search Bar -->
+                    <div class="row mb-4">
+                        <div class="col-md-8 col-lg-6 mx-auto">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <form method="GET" action="/rooms" id="searchForm">
+                                        <% if (selectedLocation) { %>
+                                            <input type="hidden" name="location" value="<%= selectedLocation %>">
+                                        <% } %>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="bi bi-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   name="search" 
+                                                   id="roomSearch" 
+                                                   class="form-control" 
+                                                   placeholder="Search rooms by name or location..." 
+                                                   value="<%= searchQuery || '' %>"
+                                                   autocomplete="off">
+                                            <% if (searchQuery && searchQuery.trim() !== '') { %>
+                                                <% if (selectedLocation) { %>
+                                                    <a href="/rooms?location=<%= selectedLocation %>" class="btn btn-outline-secondary" title="Clear search">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a href="/rooms" class="btn btn-outline-secondary" title="Clear search">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </a>
+                                                <% } %>
+                                            <% } else { %>
+                                                <button class="btn btn-dark" type="submit" title="Search">
+                                                    <i class="bi bi-arrow-right"></i>
+                                                </button>
+                                            <% } %>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <% if (messages && messages.length > 0) { %>
                         <div class="alert alert-success border-0 rounded-3 mb-4">
                             <% messages.forEach(function(message) { %>
                                 <p class="mb-0"><i class="bi bi-check-circle-fill me-2"></i><%= message %></p>
                             <% }); %>
+                        </div>
+                    <% } %>
+
+                    <!-- Search Results Info -->
+                    <% if (searchQuery && searchQuery.trim() !== '') { %>
+                        <div class="alert alert-info border-0 rounded-3 mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-search me-2"></i>
+                                    <strong>Search Results for:</strong> "<%= searchQuery %>"
+                                    <% if (rooms && rooms.length > 0) { %>
+                                        <span class="badge bg-success ms-2"><%= rooms.length %> room<%= rooms.length !== 1 ? 's' : '' %> found</span>
+                                    <% } %>
+                                </div>
+                                <% if (selectedLocation) { %>
+                                    <a href="/rooms?location=<%= selectedLocation %>" class="btn btn-sm btn-outline-primary">Clear Search</a>
+                                <% } else { %>
+                                    <a href="/rooms" class="btn btn-sm btn-outline-primary">View All Rooms</a>
+                                <% } %>
+                            </div>
                         </div>
                     <% } %>
 
@@ -143,17 +205,36 @@
                             <div class="mb-4">
                                 <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
                             </div>
-                            <h4 class="text-muted mb-3">No Rooms Found</h4>
-                            <% if (selectedLocation) { %>
-                                <p class="text-muted mb-4">No rooms are available at the selected location. Try viewing all locations or contact us for more information.</p>
-                                <a href="/rooms" class="btn btn-primary">
-                                    <i class="bi bi-arrow-left me-2"></i>View All Rooms
-                                </a>
+                            <% if (searchQuery && searchQuery.trim() !== '') { %>
+                                <h4 class="text-muted mb-3">No Rooms Found</h4>
+                                <p class="text-muted mb-4">We couldn't find any rooms matching "<strong><%= searchQuery %></strong>"<% if (selectedLocation) { %> at the selected location<% } %>.</p>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <% if (selectedLocation) { %>
+                                        <a href="/rooms?location=<%= selectedLocation %>" class="btn btn-primary">
+                                            <i class="bi bi-arrow-left me-2"></i>Clear Search
+                                        </a>
+                                    <% } else { %>
+                                        <a href="/rooms" class="btn btn-primary">
+                                            <i class="bi bi-arrow-left me-2"></i>View All Rooms
+                                        </a>
+                                    <% } %>
+                                    <a href="/locations" class="btn btn-outline-primary">
+                                        <i class="bi bi-geo-alt me-2"></i>View Locations
+                                    </a>
+                                </div>
                             <% } else { %>
-                                <p class="text-muted mb-4">We're currently setting up our room facilities. Please check back soon for updates.</p>
-                                <a href="/locations" class="btn btn-primary">
-                                    <i class="bi bi-geo-alt me-2"></i>View Locations
-                                </a>
+                                <h4 class="text-muted mb-3">No Rooms Found</h4>
+                                <% if (selectedLocation) { %>
+                                    <p class="text-muted mb-4">No rooms are available at the selected location. Try viewing all locations or contact us for more information.</p>
+                                    <a href="/rooms" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left me-2"></i>View All Rooms
+                                    </a>
+                                <% } else { %>
+                                    <p class="text-muted mb-4">We're currently setting up our room facilities. Please check back soon for updates.</p>
+                                    <a href="/locations" class="btn btn-primary">
+                                        <i class="bi bi-geo-alt me-2"></i>View Locations
+                                    </a>
+                                <% } %>
                             <% } %>
                         </div>
                     <% } %>
