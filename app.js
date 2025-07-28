@@ -95,7 +95,7 @@ function safeDbQuery(sql, params, callback) {
         // Wait a bit and retry
         setTimeout(() => {
             if (db && db.state === 'authenticated') {
-                db.query(sql, params, callback);
+                safeDbQuery(sql, params, callback);
             } else {
                 console.error("Database connection still not available after reconnect attempt");
                 callback(new Error("Database connection not available"), null);
@@ -105,7 +105,7 @@ function safeDbQuery(sql, params, callback) {
     }
 
     // Execute the query
-    db.query(sql, params, (err, results) => {
+    safeDbQuery(sql, params, (err, results) => {
         if (err) {
             console.error("Database query error:", err);
             console.error("SQL:", sql);
@@ -120,7 +120,7 @@ function safeDbQuery(sql, params, callback) {
                 
                 setTimeout(() => {
                     if (db && db.state === 'authenticated') {
-                        db.query(sql, params, callback);
+                        safeDbQuery(sql, params, callback);
                     } else {
                         callback(err, results);
                     }
@@ -302,7 +302,7 @@ app.get("/rooms", (req, res) => {
 
     sql += " ORDER BY l.name, r.room_name";
 
-    db.query(sql, queryParams, (err, rooms) => {
+    safeDbQuery(sql, queryParams, (err, rooms) => {
         if (err) {
             console.error("Database error (rooms): ", err);
         } else {
@@ -310,7 +310,7 @@ app.get("/rooms", (req, res) => {
         }
 
         const sqlLocations = "SELECT * FROM locations ORDER BY name";
-        db.query(sqlLocations, (err, locations) => {
+        safeDbQuery(sqlLocations, (err, locations) => {
             if (err) {
                 console.error("Database error (locations): ", err);
             } else {
@@ -370,7 +370,7 @@ app.get("/classes", (req, res) => {
 
     sql += " ORDER BY c.class_start_time ASC";
 
-    db.query(sql, queryParams, (err, classes) => {
+    safeDbQuery(sql, queryParams, (err, classes) => {
         if (err) {
             console.error("Database error (classes): ", err);
         } else {
@@ -378,7 +378,7 @@ app.get("/classes", (req, res) => {
         }
 
         const sqlRooms = "SELECT r.*, l.name as location_name FROM rooms r JOIN locations l ON r.location_id = l.location_id ORDER BY l.name, r.room_name";
-        db.query(sqlRooms, (err, rooms) => {
+        safeDbQuery(sqlRooms, (err, rooms) => {
             if (err) {
                 console.error("Database error (rooms): ", err);
             } else {
@@ -386,7 +386,7 @@ app.get("/classes", (req, res) => {
             }
 
             const sqlLocations = "SELECT * FROM locations ORDER BY name";
-            db.query(sqlLocations, (err, locations) => {
+            safeDbQuery(sqlLocations, (err, locations) => {
                 if (err) {
                     console.error("Database error (locations): ", err);
                 } else {
@@ -437,7 +437,7 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
         ORDER BY c.class_start_time DESC
     `;
 
-    db.query(sqlBookings, [userId], (err, bookings) => {
+    safeDbQuery(sqlBookings, [userId], (err, bookings) => {
         if (err) {
             console.error("Database error (bookings): ", err);
         } else {
@@ -466,7 +466,7 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
             ORDER BY c.class_start_time ASC
         `;
 
-        db.query(sqlUpcomingClasses, [userId], (err, upcomingClasses) => {
+        safeDbQuery(sqlUpcomingClasses, [userId], (err, upcomingClasses) => {
             if (err) {
                 console.error("Database error (upcoming classes): ", err);
             } else {
@@ -494,7 +494,7 @@ app.post("/book-class", checkAuthenticated, (req, res) => {
     }
 
     const checkBookingSQL = "SELECT * FROM bookings WHERE member_id = ? AND class_id = ? AND status = 'Booked'";
-    db.query(checkBookingSQL, [userId, classId], (err, existingBookings) => {
+    safeDbQuery(checkBookingSQL, [userId, classId], (err, existingBookings) => {
         if (err) {
             console.error("Database error checking existing booking: ", err);
             req.flash("error", "Error checking existing bookings");
@@ -519,7 +519,7 @@ app.post("/book-class", checkAuthenticated, (req, res) => {
             WHERE c.class_id = ? AND c.class_start_time > NOW()
         `;
 
-        db.query(checkAvailabilitySQL, [classId], (err, classInfo) => {
+        safeDbQuery(checkAvailabilitySQL, [classId], (err, classInfo) => {
             if (err) {
                 console.error("Database error checking availability: ", err);
                 req.flash("error", "Error checking class availability");
@@ -537,7 +537,7 @@ app.post("/book-class", checkAuthenticated, (req, res) => {
             }
 
             const bookingSQL = "INSERT INTO bookings (member_id, class_id, booking_date, status) VALUES (?, ?, CURDATE(), 'Booked')";
-            db.query(bookingSQL, [userId, classId], (err, result) => {
+            safeDbQuery(bookingSQL, [userId, classId], (err, result) => {
                 if (err) {
                     console.error("Database error creating booking: ", err);
                     req.flash("error", "Error creating booking");
@@ -573,7 +573,7 @@ app.post("/cancel-booking", checkAuthenticated, (req, res) => {
         WHERE b.booking_id = ? AND b.member_id = ? AND b.status = 'Booked'
     `;
 
-    db.query(checkBookingSQL, [bookingId, userId], (err, bookings) => {
+    safeDbQuery(checkBookingSQL, [bookingId, userId], (err, bookings) => {
         if (err) {
             console.error("Database error checking booking: ", err);
             req.flash("error", "Error checking booking details");
@@ -597,7 +597,7 @@ app.post("/cancel-booking", checkAuthenticated, (req, res) => {
         }
 
         const cancelSQL = "UPDATE bookings SET status = 'Cancelled' WHERE booking_id = ? AND member_id = ?";
-        db.query(cancelSQL, [bookingId, userId], (err, result) => {
+        safeDbQuery(cancelSQL, [bookingId, userId], (err, result) => {
             if (err) {
                 console.error("Database error cancelling booking: ", err);
                 req.flash("error", "Error cancelling booking");
@@ -614,7 +614,7 @@ app.get("/billings", checkAuthenticated, (req, res) => {
     const memberId = req.session.user.member_id || req.session.user.id;
     
     const createWalletSql = "INSERT IGNORE INTO wallet (member_id, balance) VALUES (?, 0.00)";
-    db.query(createWalletSql, [memberId], (walletErr) => {
+    safeDbQuery(createWalletSql, [memberId], (walletErr) => {
         if (walletErr) {
             console.error("Error creating wallet entry:", walletErr);
         }
@@ -652,32 +652,32 @@ app.get("/billings", checkAuthenticated, (req, res) => {
             SELECT * FROM membership_plans ORDER BY price ASC
         `;
         
-        db.query(sqlPaymentMethods, [memberId], (err, paymentMethods) => {
+        safeDbQuery(sqlPaymentMethods, [memberId], (err, paymentMethods) => {
             if (err) {
                 console.error("Database error (payment methods): ", err);
                 paymentMethods = [];
             }
             
-            db.query(sqlWallet, [memberId], (err, walletResults) => {
+            safeDbQuery(sqlWallet, [memberId], (err, walletResults) => {
                 if (err) {
                     console.error("Database error (wallet): ", err);
                 }
                 
                 const wallet = walletResults && walletResults.length > 0 ? walletResults[0] : { balance: 0 };
                 
-                db.query(sqlTransactions, [memberId], (err, transactions) => {
+                safeDbQuery(sqlTransactions, [memberId], (err, transactions) => {
                     if (err) {
                         console.error("Database error (transactions): ", err);
                         transactions = [];
                     }
                     
-                    db.query(sqlCurrentSubscription, [memberId], (err, currentSubscription) => {
+                    safeDbQuery(sqlCurrentSubscription, [memberId], (err, currentSubscription) => {
                         if (err) {
                             console.error("Database error (current subscription): ", err);
                             currentSubscription = [];
                         }
                         
-                        db.query(sqlMembershipPlans, [], (err, membershipPlans) => {
+                        safeDbQuery(sqlMembershipPlans, [], (err, membershipPlans) => {
                             if (err) {
                                 console.error("Database error (membership plans): ", err);
                                 membershipPlans = [];
@@ -710,7 +710,7 @@ app.post("/billing/payment-methods", checkAuthenticated, (req, res) => {
     const cardNumberLast4 = cardNumber ? cardNumber.replace(/\s/g, '').slice(-4) : null;
     
     if (setAsDefault) {
-        db.query("UPDATE payment_methods SET is_default = 0 WHERE member_id = ?", [memberId]);
+        safeDbQuery("UPDATE payment_methods SET is_default = 0 WHERE member_id = ?", [memberId]);
     }
     
     const values = [
@@ -722,7 +722,7 @@ app.post("/billing/payment-methods", checkAuthenticated, (req, res) => {
     const sql = `INSERT INTO payment_methods (member_id, method_type, card_number_last4, cardholder_name, 
                  expiry_date, paypal_email, account_number, bank_name, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
-    db.query(sql, values, (err, results) => {
+    safeDbQuery(sql, values, (err, results) => {
         if (err) {
             console.error("Database error adding payment method:", err);
             return res.json({ success: false, message: "Failed to add payment method: " + err.message });
@@ -736,10 +736,10 @@ app.put("/billing/payment-methods/:id/set-default", checkAuthenticated, (req, re
     const memberId = req.session.user.member_id || req.session.user.id;
     const paymentMethodId = req.params.id;
     
-    db.query("UPDATE payment_methods SET is_default = 0 WHERE member_id = ?", [memberId], (err) => {
+    safeDbQuery("UPDATE payment_methods SET is_default = 0 WHERE member_id = ?", [memberId], (err) => {
         if (err) return res.json({ success: false, message: "Failed to update default payment method" });
         
-        db.query("UPDATE payment_methods SET is_default = 1 WHERE payment_method_id = ? AND member_id = ?", 
+        safeDbQuery("UPDATE payment_methods SET is_default = 1 WHERE payment_method_id = ? AND member_id = ?", 
             [paymentMethodId, memberId], (err, results) => {
             if (err) return res.json({ success: false, message: "Failed to update default payment method" });
             if (results.affectedRows === 0) return res.json({ success: false, message: "Payment method not found" });
@@ -752,7 +752,7 @@ app.put("/billing/payment-methods/:id/set-default", checkAuthenticated, (req, re
 app.delete("/billing/payment-methods/:id", checkAuthenticated, (req, res) => {
     const memberId = req.session.user.member_id || req.session.user.id;
     
-    db.query("DELETE FROM payment_methods WHERE payment_method_id = ? AND member_id = ?", 
+    safeDbQuery("DELETE FROM payment_methods WHERE payment_method_id = ? AND member_id = ?", 
         [req.params.id, memberId], (err, results) => {
         if (err) return res.json({ success: false, message: "Failed to delete payment method" });
         if (results.affectedRows === 0) return res.json({ success: false, message: "Payment method not found" });
@@ -779,7 +779,7 @@ app.post("/billing/add-funds", checkAuthenticated, (req, res) => {
             return res.json({ success: false, message: "Transaction failed" });
         }
         
-        db.query(sqlCheckWallet, [memberId], (err, walletResults) => {
+        safeDbQuery(sqlCheckWallet, [memberId], (err, walletResults) => {
             if (err) {
                 return db.rollback(() => {
                     console.error("Error checking wallet:", err);
@@ -788,7 +788,7 @@ app.post("/billing/add-funds", checkAuthenticated, (req, res) => {
             }
             
             if (walletResults.length === 0) {
-                db.query(sqlCreateWallet, [memberId, fundAmount], (err) => {
+                safeDbQuery(sqlCreateWallet, [memberId, fundAmount], (err) => {
                     if (err) {
                         return db.rollback(() => {
                             console.error("Error creating wallet:", err);
@@ -799,7 +799,7 @@ app.post("/billing/add-funds", checkAuthenticated, (req, res) => {
                     addTransaction();
                 });
             } else {                
-                db.query(sqlUpdateWallet, [fundAmount, memberId], (err) => {
+                safeDbQuery(sqlUpdateWallet, [fundAmount, memberId], (err) => {
                     if (err) {
                         return db.rollback(() => {
                             console.error("Error updating wallet:", err);
@@ -818,7 +818,7 @@ app.post("/billing/add-funds", checkAuthenticated, (req, res) => {
                 VALUES (?, ?, 'Add Funds', ?, 'Funds added to wallet', 'Completed')
             `;
             
-            db.query(sqlAddTransaction, [memberId, paymentMethodId, fundAmount], (err) => {
+            safeDbQuery(sqlAddTransaction, [memberId, paymentMethodId, fundAmount], (err) => {
                 if (err) {
                     return db.rollback(() => {
                         console.error("Error adding transaction:", err);
@@ -853,7 +853,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
         return res.json({ success: false, message: "Plan ID is required" });
     }
     
-    db.query(sqlCheckSubscription, [memberId], (err, activeSubscriptions) => {
+    safeDbQuery(sqlCheckSubscription, [memberId], (err, activeSubscriptions) => {
         if (err) {
             console.error("Error checking active subscription:", err);
             return res.json({ success: false, message: "Failed to check subscription status" });
@@ -863,7 +863,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
             return res.json({ success: false, message: "You already have an active membership plan. Please cancel your current plan first." });
         }
         
-        db.query(sqlPlanDetails, [planId], (err, planResults) => {
+        safeDbQuery(sqlPlanDetails, [planId], (err, planResults) => {
             if (err) {
                 console.error("Error fetching plan details:", err);
                 return res.json({ success: false, message: "Failed to fetch plan details" });
@@ -875,7 +875,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
             
             const plan = planResults[0];
             
-            db.query(sqlWalletBalance, [memberId], (err, walletResults) => {
+            safeDbQuery(sqlWalletBalance, [memberId], (err, walletResults) => {
                 if (err) {
                     console.error("Error fetching wallet balance:", err);
                     return res.json({ success: false, message: "Failed to check wallet balance" });
@@ -899,7 +899,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
                     
                     const sqlUpdateWallet = "UPDATE wallet SET balance = balance - ? WHERE member_id = ?";
                     
-                    db.query(sqlUpdateWallet, [planPrice, memberId], (err) => {
+                    safeDbQuery(sqlUpdateWallet, [planPrice, memberId], (err) => {
                         if (err) {
                             return db.rollback(() => {
                                 console.error("Error updating wallet:", err);
@@ -909,7 +909,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
                         
                         const sqlCreateSubscription = "INSERT INTO membership_subscriptions (member_id, plan_id, status) VALUES (?, ?, 'Active')";
                         
-                        db.query(sqlCreateSubscription, [memberId, planId], (err) => {
+                        safeDbQuery(sqlCreateSubscription, [memberId, planId], (err) => {
                             if (err) {
                                 return db.rollback(() => {
                                     console.error("Error creating subscription:", err);
@@ -924,7 +924,7 @@ app.post("/billing/select-plan", checkAuthenticated, (req, res) => {
                             
                             const description = `${plan.plan_name} membership plan subscription`;
                             
-                            db.query(sqlAddTransaction, [memberId, planPrice, description], (err) => {
+                            safeDbQuery(sqlAddTransaction, [memberId, planPrice, description], (err) => {
                                 if (err) {
                                     return db.rollback(() => {
                                         console.error("Error adding transaction:", err);
@@ -965,7 +965,7 @@ app.post("/billing/cancel-plan", checkAuthenticated, (req, res) => {
         WHERE ms.member_id = ? AND ms.status = 'Active'
     `;
     
-    db.query(sqlCheckSubscription, [memberId], (err, activeSubscriptions) => {
+    safeDbQuery(sqlCheckSubscription, [memberId], (err, activeSubscriptions) => {
         if (err) {
             console.error("Error checking active subscription:", err);
             return res.json({ success: false, message: "Failed to check subscription status" });
@@ -979,7 +979,7 @@ app.post("/billing/cancel-plan", checkAuthenticated, (req, res) => {
         
         const sqlCancelSubscription = "UPDATE membership_subscriptions SET status = 'Cancelled' WHERE subscription_id = ? AND member_id = ?";
         
-        db.query(sqlCancelSubscription, [subscription.subscription_id, memberId], (err, result) => {
+        safeDbQuery(sqlCancelSubscription, [subscription.subscription_id, memberId], (err, result) => {
             if (err) {
                 console.error("Error cancelling subscription:", err);
                 return res.json({ success: false, message: "Failed to cancel subscription" });
@@ -1034,19 +1034,19 @@ app.get("/userDashboard", checkAuthenticated, (req, res) => {
         ORDER BY c.class_start_time ASC
     `;
     
-    db.query(sqlBookings, [req.session.user.member_id || req.session.user.id], (err, bookings) => {
+    safeDbQuery(sqlBookings, [req.session.user.member_id || req.session.user.id], (err, bookings) => {
         if (err) {
             console.error("Database error (bookings): ", err);
             bookings = [];
         }
         
-        db.query(sqlBillings, [req.session.user.member_id || req.session.user.id], (err, billings) => {
+        safeDbQuery(sqlBillings, [req.session.user.member_id || req.session.user.id], (err, billings) => {
             if (err) {
                 console.error("Database error (billings): ", err);
                 billings = [];
             }
             
-            db.query(sqlUpcomingClasses, [], (err, upcomingClasses) => {
+            safeDbQuery(sqlUpcomingClasses, [], (err, upcomingClasses) => {
                 if (err) {
                     console.error("Database error (upcoming classes): ", err);
                     upcomingClasses = [];
@@ -1092,7 +1092,7 @@ app.get("/dashboard", checkAuthenticated, checkAdmin, (req, res) => {
             (SELECT COUNT(*) FROM bookings) as totalBookings
     `;
     
-    db.query(sqlStats, (err, stats) => {
+    safeDbQuery(sqlStats, (err, stats) => {
         if (err) {
             console.error("Database error (stats): ", err);
         } else if (stats && stats[0]) {
@@ -1148,7 +1148,7 @@ app.post("/editProfile", (req, res, next) => {
     }
 
     const sqlCheckEmail = "SELECT * FROM members WHERE email = ? AND id != ?";
-    db.query(sqlCheckEmail, [email, userId], (err, results) => {
+    safeDbQuery(sqlCheckEmail, [email, userId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Update failed. Please try again.");
@@ -1162,7 +1162,7 @@ app.post("/editProfile", (req, res, next) => {
         }
 
         const sqlUpdate = "UPDATE members SET username = ?, email = ?, address = ?, contact = ?, dob = ?, gender = ?, profile_picture = ? WHERE id = ?";
-        db.query(sqlUpdate, [username, email, address, contact, dob, gender, profilePicture, userId], (err, result) => {
+        safeDbQuery(sqlUpdate, [username, email, address, contact, dob, gender, profilePicture, userId], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Update failed. Please try again.");
@@ -1185,7 +1185,7 @@ app.post("/editProfile", (req, res, next) => {
 
 // Admin Member Management Routes
 app.get("/admin/members", checkAuthenticated, checkAdmin, (req, res) => {
-    db.query("SELECT * FROM members ORDER BY username ASC", (err, members) => {
+    safeDbQuery("SELECT * FROM members ORDER BY username ASC", (err, members) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching members data");
@@ -1204,7 +1204,7 @@ app.get("/admin/members", checkAuthenticated, checkAdmin, (req, res) => {
 
 // Get member details (AJAX)
 app.get("/admin/members/:id/details", checkAuthenticated, checkAdmin, (req, res) => {
-    db.query("SELECT * FROM members WHERE id = ?", [req.params.id], (err, results) => {
+    safeDbQuery("SELECT * FROM members WHERE id = ?", [req.params.id], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             return res.json({ success: false, error: "Database error" });
@@ -1246,7 +1246,7 @@ app.post("/admin/members/:id/update", (req, res, next) => {
     }
 
     const sqlCheckEmail = "SELECT * FROM members WHERE email = ? AND id != ?";
-    db.query(sqlCheckEmail, [email, memberId], (err, results) => {
+    safeDbQuery(sqlCheckEmail, [email, memberId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error checking email availability. Please try again.");
@@ -1260,7 +1260,7 @@ app.post("/admin/members/:id/update", (req, res, next) => {
 
         // Get current member data
         const sqlGetMember = "SELECT * FROM members WHERE id = ?";
-        db.query(sqlGetMember, [memberId], (err, memberResults) => {
+        safeDbQuery(sqlGetMember, [memberId], (err, memberResults) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error fetching member data.");
@@ -1297,7 +1297,7 @@ app.post("/admin/members/:id/update", (req, res, next) => {
                 queryParams = [username, email, contact, dob, role, gender, address, profilePicture, memberId];
             }
 
-            db.query(sqlUpdate, queryParams, (err, result) => {
+            safeDbQuery(sqlUpdate, queryParams, (err, result) => {
                 if (err) {
                     console.error("Database error: ", err);
                     req.flash("error", "Error updating member. Please try again.");
@@ -1322,7 +1322,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
     }
 
     const sqlGetMember = "SELECT username FROM members WHERE id = ?";
-    db.query(sqlGetMember, [memberId], (err, results) => {
+    safeDbQuery(sqlGetMember, [memberId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching member data.");
@@ -1344,7 +1344,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
             }
             
             const sqlDeleteTransactions = "DELETE FROM wallet_transactions WHERE member_id = ?";
-            db.query(sqlDeleteTransactions, [memberId], (err) => {
+            safeDbQuery(sqlDeleteTransactions, [memberId], (err) => {
                 if (err) {
                     return db.rollback(() => {
                         console.error("Error deleting wallet transactions:", err);
@@ -1354,7 +1354,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                 }
 
                 const sqlDeletePaymentMethods = "DELETE FROM payment_methods WHERE member_id = ?";
-                db.query(sqlDeletePaymentMethods, [memberId], (err) => {
+                safeDbQuery(sqlDeletePaymentMethods, [memberId], (err) => {
                     if (err) {
                         return db.rollback(() => {
                             console.error("Error deleting payment methods:", err);
@@ -1364,7 +1364,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                     }
 
                     const sqlDeleteSubscriptions = "DELETE FROM membership_subscriptions WHERE member_id = ?";
-                    db.query(sqlDeleteSubscriptions, [memberId], (err) => {
+                    safeDbQuery(sqlDeleteSubscriptions, [memberId], (err) => {
                         if (err) {
                             return db.rollback(() => {
                                 console.error("Error deleting subscriptions:", err);
@@ -1374,7 +1374,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                         }
 
                         const sqlDeleteWallet = "DELETE FROM wallet WHERE member_id = ?";
-                        db.query(sqlDeleteWallet, [memberId], (err) => {
+                        safeDbQuery(sqlDeleteWallet, [memberId], (err) => {
                             if (err) {
                                 return db.rollback(() => {
                                     console.error("Error deleting wallet:", err);
@@ -1384,7 +1384,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                             }
 
                             const sqlDeleteBookings = "DELETE FROM bookings WHERE member_id = ?";
-                            db.query(sqlDeleteBookings, [memberId], (err) => {
+                            safeDbQuery(sqlDeleteBookings, [memberId], (err) => {
                                 if (err) {
                                     return db.rollback(() => {
                                         console.error("Error deleting bookings:", err);
@@ -1394,7 +1394,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                                 }
 
                                 const sqlDeleteBillings = "DELETE FROM billings WHERE member_id = ?";
-                                db.query(sqlDeleteBillings, [memberId], (err) => {
+                                safeDbQuery(sqlDeleteBillings, [memberId], (err) => {
                                     if (err) {
                                         return db.rollback(() => {
                                             console.error("Error deleting billings:", err);
@@ -1404,7 +1404,7 @@ app.post("/admin/members/:id/delete", checkAuthenticated, checkAdmin, (req, res)
                                     }
 
                                     const sqlDeleteMember = "DELETE FROM members WHERE id = ?";
-                                    db.query(sqlDeleteMember, [memberId], (err, result) => {
+                                    safeDbQuery(sqlDeleteMember, [memberId], (err, result) => {
                                         if (err) {
                                             return db.rollback(() => {
                                                 console.error("Error deleting member:", err);
@@ -1461,7 +1461,7 @@ app.get("/admin/locations", checkAuthenticated, checkAdmin, (req, res) => {
         ORDER BY l.name ASC
     `;
     
-    db.query(sqlLocations, (err, locations) => {
+    safeDbQuery(sqlLocations, (err, locations) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching locations data");
@@ -1475,7 +1475,7 @@ app.get("/admin/locations", checkAuthenticated, checkAdmin, (req, res) => {
                 (SELECT COUNT(*) FROM classes) as totalClasses
         `;
         
-        db.query(sqlStats, (err, stats) => {
+        safeDbQuery(sqlStats, (err, stats) => {
             if (err) {
                 console.error("Database error (stats): ", err);
             } else if (stats && stats[0]) {
@@ -1501,7 +1501,7 @@ app.get("/admin/locations/:id/details", checkAuthenticated, checkAdmin, (req, re
         ORDER BY c.class_start_time ASC
     `;
     
-    db.query(sqlLocation, [locationId], (err, locationResults) => {
+    safeDbQuery(sqlLocation, [locationId], (err, locationResults) => {
         if (err) {
             console.error("Database error: ", err);
             return res.json({ success: false, error: "Database error" });
@@ -1511,13 +1511,13 @@ app.get("/admin/locations/:id/details", checkAuthenticated, checkAdmin, (req, re
             return res.json({ success: false, error: "Location not found" });
         }
         
-        db.query(sqlRooms, [locationId], (err, rooms) => {
+        safeDbQuery(sqlRooms, [locationId], (err, rooms) => {
             if (err) {
                 console.error("Database error: ", err);
                 return res.json({ success: false, error: "Database error" });
             }
             
-            db.query(sqlClasses, [locationId], (err, classes) => {
+            safeDbQuery(sqlClasses, [locationId], (err, classes) => {
                 if (err) {
                     console.error("Database error: ", err);
                     return res.json({ success: false, error: "Database error" });
@@ -1539,7 +1539,7 @@ app.get("/admin/locations/:id/rooms", checkAuthenticated, checkAdmin, (req, res)
     const locationId = req.params.id;
     const sql = "SELECT * FROM rooms WHERE location_id = ? ORDER BY room_name";
     
-    db.query(sql, [locationId], (err, rooms) => {
+    safeDbQuery(sql, [locationId], (err, rooms) => {
         if (err) {
             console.error("Database error: ", err);
             return res.json({ success: false, error: "Database error" });
@@ -1575,7 +1575,7 @@ app.post("/admin/locations/add", (req, res, next) => {
     }
 
     const sqlCheckLocation = "SELECT * FROM locations WHERE name = ?";
-    db.query(sqlCheckLocation, [name], (err, results) => {
+    safeDbQuery(sqlCheckLocation, [name], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error checking location existence. Please try again.");
@@ -1588,7 +1588,7 @@ app.post("/admin/locations/add", (req, res, next) => {
         }
 
         const sqlInsertLocation = "INSERT INTO locations (name, address, image) VALUES (?, ?, ?)";
-        db.query(sqlInsertLocation, [name, address, image], (err, result) => {
+        safeDbQuery(sqlInsertLocation, [name, address, image], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error adding location. Please try again.");
@@ -1623,7 +1623,7 @@ app.post("/admin/locations/:id/update", (req, res, next) => {
     }
 
     const sqlCheckName = "SELECT * FROM locations WHERE name = ? AND location_id != ?";
-    db.query(sqlCheckName, [name, locationId], (err, results) => {
+    safeDbQuery(sqlCheckName, [name, locationId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error checking location name availability. Please try again.");
@@ -1636,7 +1636,7 @@ app.post("/admin/locations/:id/update", (req, res, next) => {
         }
 
         const sqlGetLocation = "SELECT * FROM locations WHERE location_id = ?";
-        db.query(sqlGetLocation, [locationId], (err, locationResults) => {
+        safeDbQuery(sqlGetLocation, [locationId], (err, locationResults) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error fetching location data.");
@@ -1656,7 +1656,7 @@ app.post("/admin/locations/:id/update", (req, res, next) => {
             }
 
             const sqlUpdate = "UPDATE locations SET name = ?, address = ?, image = ? WHERE location_id = ?";
-            db.query(sqlUpdate, [name, address, image, locationId], (err, result) => {
+            safeDbQuery(sqlUpdate, [name, address, image, locationId], (err, result) => {
                 if (err) {
                     console.error("Database error: ", err);
                     req.flash("error", "Error updating location. Please try again.");
@@ -1675,7 +1675,7 @@ app.post("/admin/locations/:id/delete", checkAuthenticated, checkAdmin, (req, re
     const locationId = req.params.id;
 
     const sqlGetLocation = "SELECT name FROM locations WHERE location_id = ?";
-    db.query(sqlGetLocation, [locationId], (err, results) => {
+    safeDbQuery(sqlGetLocation, [locationId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching location data.");
@@ -1690,7 +1690,7 @@ app.post("/admin/locations/:id/delete", checkAuthenticated, checkAdmin, (req, re
         const locationName = results[0].name;
 
         const sqlDelete = "DELETE FROM locations WHERE location_id = ?";
-        db.query(sqlDelete, [locationId], (err, result) => {
+        safeDbQuery(sqlDelete, [locationId], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error deleting location. Please try again.");
@@ -1729,7 +1729,7 @@ app.get("/admin/classes", checkAuthenticated, checkAdmin, (req, res) => {
         ORDER BY c.class_start_time ASC
     `;
     
-    db.query(sqlClasses, (err, classes) => {
+    safeDbQuery(sqlClasses, (err, classes) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching classes data");
@@ -1738,7 +1738,7 @@ app.get("/admin/classes", checkAuthenticated, checkAdmin, (req, res) => {
         }
 
         const sqlLocations = "SELECT * FROM locations ORDER BY name ASC";
-        db.query(sqlLocations, (err, locations) => {
+        safeDbQuery(sqlLocations, (err, locations) => {
             if (err) {
                 console.error("Database error (locations): ", err);
             } else {
@@ -1752,7 +1752,7 @@ app.get("/admin/classes", checkAuthenticated, checkAdmin, (req, res) => {
                     (SELECT COUNT(DISTINCT instructor_name) FROM classes) as totalInstructors
             `;
             
-            db.query(sqlStats, (err, stats) => {
+            safeDbQuery(sqlStats, (err, stats) => {
                 if (err) {
                     console.error("Database error (stats): ", err);
                 } else if (stats && stats[0]) {
@@ -1777,7 +1777,7 @@ app.get("/admin/classes/:id/edit-data", checkAuthenticated, checkAdmin, (req, re
         WHERE c.class_id = ?
     `;
     
-    db.query(sqlClass, [classId], (err, classResults) => {
+    safeDbQuery(sqlClass, [classId], (err, classResults) => {
         if (err) {
             console.error("Database error: ", err);
             return res.json({ success: false, error: "Database error" });
@@ -1834,7 +1834,7 @@ app.post("/admin/classes/add", checkAuthenticated, checkAdmin, (req, res) => {
         )
     `;
     
-    db.query(sqlCheckAvailability, [room_id, class_start_time, class_start_time, class_end_time, class_end_time, class_start_time, class_end_time], (err, conflicts) => {
+    safeDbQuery(sqlCheckAvailability, [room_id, class_start_time, class_start_time, class_end_time, class_end_time, class_start_time, class_end_time], (err, conflicts) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error checking room availability. Please try again.");
@@ -1847,7 +1847,7 @@ app.post("/admin/classes/add", checkAuthenticated, checkAdmin, (req, res) => {
         }
 
         const sqlInsertClass = "INSERT INTO classes (room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, max_participants) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        db.query(sqlInsertClass, [room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, maxParticipants], (err, result) => {
+        safeDbQuery(sqlInsertClass, [room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, maxParticipants], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error adding class. Please try again.");
@@ -1885,7 +1885,7 @@ app.post("/admin/classes/:id/update", checkAuthenticated, checkAdmin, (req, res)
     }
 
     const sqlCheckBookings = "SELECT COUNT(*) as booking_count FROM bookings WHERE class_id = ? AND status = 'Booked'";
-    db.query(sqlCheckBookings, [classId], (err, bookingResults) => {
+    safeDbQuery(sqlCheckBookings, [classId], (err, bookingResults) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error checking current bookings.");
@@ -1908,7 +1908,7 @@ app.post("/admin/classes/:id/update", checkAuthenticated, checkAdmin, (req, res)
             )
         `;
         
-        db.query(sqlCheckAvailability, [room_id, classId, class_start_time, class_start_time, class_end_time, class_end_time, class_start_time, class_end_time], (err, conflicts) => {
+        safeDbQuery(sqlCheckAvailability, [room_id, classId, class_start_time, class_start_time, class_end_time, class_end_time, class_start_time, class_end_time], (err, conflicts) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error checking room availability. Please try again.");
@@ -1921,7 +1921,7 @@ app.post("/admin/classes/:id/update", checkAuthenticated, checkAdmin, (req, res)
             }
 
             const sqlUpdate = "UPDATE classes SET room_id = ?, location_id = ?, class_name = ?, class_type = ?, instructor_name = ?, class_start_time = ?, class_end_time = ?, max_participants = ? WHERE class_id = ?";
-            db.query(sqlUpdate, [room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, maxParticipants, classId], (err, result) => {
+            safeDbQuery(sqlUpdate, [room_id, location_id, class_name, class_type, instructor_name, class_start_time, class_end_time, maxParticipants, classId], (err, result) => {
                 if (err) {
                     console.error("Database error: ", err);
                     req.flash("error", "Error updating class. Please try again.");
@@ -1940,7 +1940,7 @@ app.post("/admin/classes/:id/delete", checkAuthenticated, checkAdmin, (req, res)
     const classId = req.params.id;
 
     const sqlGetClass = "SELECT class_name FROM classes WHERE class_id = ?";
-    db.query(sqlGetClass, [classId], (err, results) => {
+    safeDbQuery(sqlGetClass, [classId], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Error fetching class data.");
@@ -1955,7 +1955,7 @@ app.post("/admin/classes/:id/delete", checkAuthenticated, checkAdmin, (req, res)
         const className = results[0].class_name;
 
         const sqlDeleteBookings = "DELETE FROM bookings WHERE class_id = ?";
-        db.query(sqlDeleteBookings, [classId], (err, result) => {
+        safeDbQuery(sqlDeleteBookings, [classId], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Error deleting class bookings. Please try again.");
@@ -1963,7 +1963,7 @@ app.post("/admin/classes/:id/delete", checkAuthenticated, checkAdmin, (req, res)
             }
 
             const sqlDeleteClass = "DELETE FROM classes WHERE class_id = ?";
-            db.query(sqlDeleteClass, [classId], (err, result) => {
+            safeDbQuery(sqlDeleteClass, [classId], (err, result) => {
                 if (err) {
                     console.error("Database error: ", err);
                     req.flash("error", "Error deleting class. Please try again.");
@@ -2003,7 +2003,7 @@ app.post("/register", validateRegistration, (req, res) => {
     const sqlCheckUser = "SELECT * FROM members WHERE username = ? OR email = ?";
     const sqlInsertUser = "INSERT INTO members (username, email, password, contact, dob, role, gender, address, profile_picture) VALUES (?, ?, SHA1(?), ?, ?, ?, ?, ?, ?)";
 
-    db.query(sqlCheckUser, [username, email], (err, results) => {
+    safeDbQuery(sqlCheckUser, [username, email], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Registration failed. Please try again.");
@@ -2016,7 +2016,7 @@ app.post("/register", validateRegistration, (req, res) => {
             return res.redirect("/register");
         }
 
-        db.query(sqlInsertUser, [username, email, password, contact, dob, role, gender, address, "defaultProfilePicture.jpg"], (err, result) => {
+        safeDbQuery(sqlInsertUser, [username, email, password, contact, dob, role, gender, address, "defaultProfilePicture.jpg"], (err, result) => {
             if (err) {
                 console.error("Database error: ", err);
                 req.flash("error", "Registration failed. Please try again.");
@@ -2046,7 +2046,7 @@ app.post("/login", (req, res) => {
         return res.redirect("/login");
     }
 
-    db.query(sql, [email, password], (err, results) => {
+    safeDbQuery(sql, [email, password], (err, results) => {
         if (err) {
             console.error("Database error: ", err);
             req.flash("error", "Login failed. Please try again.");
