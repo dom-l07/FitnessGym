@@ -3,7 +3,6 @@ const mysql = require("mysql2");
 const session = require("express-session");
 const flash = require("connect-flash");
 const multer = require("multer");
-require('dotenv').config();
 
 const app = express();
 
@@ -28,11 +27,11 @@ const upload = multer({
 });
 
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    host: "zl-0k6.h.filess.io",
+    port: 3307,
+    user: "kinegit_beforefact",
+    password: "e21ff8d5584391be8da6a739de042848972db1b6",
+    database: "kinegit_beforefact"
 });
 
 db.connect((err) => {
@@ -48,7 +47,7 @@ app.use(express.json());
 
 // Session Middleware
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: "c237isamazingandfun",
     resave: false,
     saveUninitialized: true,
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
