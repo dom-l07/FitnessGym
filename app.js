@@ -338,6 +338,7 @@ app.get("/classes", (req, res) => {
 // Protected pages (require login)
 app.get("/bookings", checkAuthenticated, (req, res) => {
     const userId = req.session.user.member_id || req.session.user.id;
+    const { search, status, classType, location } = req.query;
     
     const renderData = {
         title: "KineGit | My Bookings",
@@ -345,7 +346,12 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
         messages: req.flash("success"),
         errors: req.flash("error"),
         bookings: [],
-        upcomingClasses: []
+        upcomingClasses: [],
+        searchQuery: search || '',
+        statusFilter: status || '',
+        classTypeFilter: classType || '',
+        locationFilter: location || '',
+        locations: []
     };
 
     if (!db || db.state === 'disconnected') {
@@ -353,7 +359,8 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
         return res.render("afterloginejs/bookings", renderData);
     }
 
-    const sqlBookings = `
+    // Build dynamic SQL query for bookings with search functionality
+    let sqlBookings = `
         SELECT b.*, c.class_name, c.class_type, c.instructor_name, 
                c.class_start_time, c.class_end_time, c.max_participants,
                l.name as location_name, l.address as location_address,
@@ -370,10 +377,49 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
             GROUP BY class_id
         ) booking_count ON c.class_id = booking_count.class_id
         WHERE b.member_id = ?
-        ORDER BY c.class_start_time DESC
     `;
 
-    db.query(sqlBookings, [userId], (err, bookings) => {
+    let queryParams = [userId];
+    let whereConditions = [];
+
+    // Add search conditions
+    if (search && search.trim()) {
+        whereConditions.push(`(
+            LOWER(c.class_name) LIKE ? OR 
+            LOWER(c.instructor_name) LIKE ? OR 
+            LOWER(l.name) LIKE ? OR 
+            LOWER(r.room_name) LIKE ?
+        )`);
+        const searchTerm = `%${search.toLowerCase()}%`;
+        queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+
+    // Add status filter
+    if (status && status.trim()) {
+        whereConditions.push('b.status = ?');
+        queryParams.push(status);
+    }
+
+    // Add class type filter
+    if (classType && classType.trim()) {
+        whereConditions.push('LOWER(c.class_type) = ?');
+        queryParams.push(classType.toLowerCase());
+    }
+
+    // Add location filter
+    if (location && location.trim()) {
+        whereConditions.push('l.location_id = ?');
+        queryParams.push(location);
+    }
+
+    // Append WHERE conditions
+    if (whereConditions.length > 0) {
+        sqlBookings += ' AND ' + whereConditions.join(' AND ');
+    }
+
+    sqlBookings += ' ORDER BY c.class_start_time DESC';
+
+    db.query(sqlBookings, queryParams, (err, bookings) => {
         if (err) {
             console.error("Database error (bookings): ", err);
         } else {
@@ -409,7 +455,17 @@ app.get("/bookings", checkAuthenticated, (req, res) => {
                 renderData.upcomingClasses = upcomingClasses || [];
             }
 
-            res.render("afterloginejs/bookings", renderData);
+            // Get locations for filter dropdown
+            const sqlLocations = "SELECT * FROM locations ORDER BY name";
+            db.query(sqlLocations, (err, locations) => {
+                if (err) {
+                    console.error("Database error (locations): ", err);
+                } else {
+                    renderData.locations = locations || [];
+                }
+
+                res.render("afterloginejs/bookings", renderData);
+            });
         });
     });
 });

@@ -54,16 +54,122 @@
                         </div>
                     <% } %>
 
+                    <!-- Search and Filter Section -->
+                    <div class="card border-0 mb-4" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);">
+                        <div class="card-body">
+                            <form method="GET" action="/bookings" id="searchForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="search" class="form-label text-white">
+                                            <i class="bi bi-search me-1"></i>Search Bookings
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="search" 
+                                               name="search" 
+                                               value="<%= searchQuery %>"
+                                               placeholder="Search by class name, instructor, location, or room...">
+                                    </div>
+                                    
+                                    <div class="col-md-2">
+                                        <label for="status" class="form-label text-white">
+                                            <i class="bi bi-funnel me-1"></i>Status
+                                        </label>
+                                        <select class="form-select" id="status" name="status">
+                                            <option value="">All Status</option>
+                                            <option value="Booked" <%= statusFilter === 'Booked' ? 'selected' : '' %>>Booked</option>
+                                            <option value="Cancelled" <%= statusFilter === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2">
+                                        <label for="classType" class="form-label text-white">
+                                            <i class="bi bi-tag me-1"></i>Class Type
+                                        </label>
+                                        <select class="form-select" id="classType" name="classType">
+                                            <option value="">All Types</option>
+                                            <option value="cardio" <%= classTypeFilter === 'cardio' ? 'selected' : '' %>>Cardio</option>
+                                            <option value="strength" <%= classTypeFilter === 'strength' ? 'selected' : '' %>>Strength</option>
+                                            <option value="zumba" <%= classTypeFilter === 'zumba' ? 'selected' : '' %>>Zumba</option>
+                                            <option value="yoga" <%= classTypeFilter === 'yoga' ? 'selected' : '' %>>Yoga</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2">
+                                        <label for="location" class="form-label text-white">
+                                            <i class="bi bi-geo-alt me-1"></i>Location
+                                        </label>
+                                        <select class="form-select" id="location" name="location">
+                                            <option value="">All Locations</option>
+                                            <% if (locations && locations.length > 0) { %>
+                                                <% locations.forEach(function(loc) { %>
+                                                    <option value="<%= loc.location_id %>" <%= locationFilter == loc.location_id ? 'selected' : '' %>>
+                                                        <%= loc.name %>
+                                                    </option>
+                                                <% }); %>
+                                            <% } %>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <button type="submit" class="btn btn-primary me-2">
+                                            <i class="bi bi-search me-1"></i>Search
+                                        </button>
+                                        <a href="/bookings" class="btn btn-outline-light">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                                        </a>
+                                        <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                                            <span class="badge bg-info ms-2">
+                                                <i class="bi bi-funnel-fill me-1"></i>Filters Applied
+                                            </span>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- Current Bookings Section -->
                     <div class="booking-section">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h3 class="text-primary mb-0">
                                 <i class="bi bi-calendar-event me-2"></i>Your Bookings
+                                <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                                    <small class="text-muted">- Search Results</small>
+                                <% } %>
                             </h3>
                             <span class="badge bg-primary fs-6">
                                 <%= bookings ? bookings.length : 0 %> booking<%= bookings && bookings.length !== 1 ? 's' : '' %>
+                                <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                                    found
+                                <% } %>
                             </span>
                         </div>
+
+                        <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Active Filters:</strong>
+                                <% if (searchQuery) { %>
+                                    <span class="badge bg-primary ms-1">Search: "<%= searchQuery %>"</span>
+                                <% } %>
+                                <% if (statusFilter) { %>
+                                    <span class="badge bg-success ms-1">Status: <%= statusFilter %></span>
+                                <% } %>
+                                <% if (classTypeFilter) { %>
+                                    <span class="badge bg-warning ms-1">Type: <%= classTypeFilter.charAt(0).toUpperCase() + classTypeFilter.slice(1) %></span>
+                                <% } %>
+                                <% if (locationFilter) { %>
+                                    <% 
+                                        const selectedLocation = locations.find(loc => loc.location_id == locationFilter);
+                                        const locationName = selectedLocation ? selectedLocation.name : 'Unknown';
+                                    %>
+                                    <span class="badge bg-info ms-1">Location: <%= locationName %></span>
+                                <% } %>
+                            </div>
+                        <% } %>
 
                         <% if (bookings && bookings.length > 0) { %>
                             <div class="row g-4">
@@ -173,13 +279,28 @@
                         <% } else { %>
                             <div class="text-center py-5">
                                 <div class="mb-4">
-                                    <i class="bi bi-calendar-x text-white" style="font-size: 4rem;"></i>
+                                    <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                                        <i class="bi bi-search text-white" style="font-size: 4rem;"></i>
+                                    <% } else { %>
+                                        <i class="bi bi-calendar-x text-white" style="font-size: 4rem;"></i>
+                                    <% } %>
                                 </div>
-                                <h4 class="text-white mb-3">No Bookings Yet</h4>
-                                <p class="text-white mb-4">You haven't booked any classes yet. Start your fitness journey by booking your first class!</p>
-                                <a href="/classes" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-search me-2"></i>Browse Classes
-                                </a>
+                                <% if (searchQuery || statusFilter || classTypeFilter || locationFilter) { %>
+                                    <h4 class="text-white mb-3">No Bookings Found</h4>
+                                    <p class="text-white mb-4">No bookings match your search criteria. Try adjusting your filters or search terms.</p>
+                                    <a href="/bookings" class="btn btn-outline-light me-2">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Clear All Filters
+                                    </a>
+                                    <a href="/classes" class="btn btn-primary">
+                                        <i class="bi bi-search me-2"></i>Browse Classes
+                                    </a>
+                                <% } else { %>
+                                    <h4 class="text-white mb-3">No Bookings Yet</h4>
+                                    <p class="text-white mb-4">You haven't booked any classes yet. Start your fitness journey by booking your first class!</p>
+                                    <a href="/classes" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-search me-2"></i>Browse Classes
+                                    </a>
+                                <% } %>
                             </div>
                         <% } %>
                     </div>
@@ -286,7 +407,7 @@
         <!-- Cancel Booking Modal -->
         <div class="modal fade" id="cancelModal" tabindex="-1">
             <div class="modal-dialog">
-                <div class="modal-content">
+                <div class="modal-content text-dark">
                     <div class="modal-header">
                         <h5 class="modal-title">Cancel Booking</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -366,6 +487,57 @@
                         confirmBooking(classId, className, classDate, classTime);
                     });
                 });
+
+                // Auto-submit search form when filters change
+                const searchForm = document.getElementById('searchForm');
+                const filterSelects = searchForm.querySelectorAll('select');
+                
+                filterSelects.forEach(select => {
+                    select.addEventListener('change', function() {
+                        // Add a small delay to improve UX
+                        setTimeout(() => {
+                            searchForm.submit();
+                        }, 100);
+                    });
+                });
+
+                // Add debounced search for the search input
+                const searchInput = document.getElementById('search');
+                let searchTimeout;
+                
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        // Only auto-submit if there's some content or if clearing the search
+                        if (this.value.length >= 2 || this.value.length === 0) {
+                            searchForm.submit();
+                        }
+                    }, 500); // Wait 500ms after user stops typing
+                });
+
+                // Add search keyboard shortcuts
+                document.addEventListener('keydown', function(e) {
+                    // Ctrl/Cmd + F to focus search
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                        e.preventDefault();
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                    
+                    // Escape to clear search
+                    if (e.key === 'Escape' && document.activeElement === searchInput) {
+                        searchInput.value = '';
+                        // Clear all filters
+                        filterSelects.forEach(select => select.value = '');
+                        searchForm.submit();
+                    }
+                });
+
+                // Highlight search terms in results
+                const searchQuery = '<%= searchQuery %>';
+                if (searchQuery && searchQuery.trim()) {
+                    highlightSearchTerms(searchQuery);
+                }
             });
 
             function confirmCancel(bookingId, className) {
@@ -380,6 +552,35 @@
                 document.getElementById('bookClassDate').textContent = classDate;
                 document.getElementById('bookClassTime').textContent = classTime;
                 new bootstrap.Modal(document.getElementById('bookModal')).show();
+            }
+
+            function highlightSearchTerms(searchQuery) {
+                const terms = searchQuery.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+                const bookingCards = document.querySelectorAll('.booking-card');
+                
+                bookingCards.forEach(card => {
+                    const textElements = card.querySelectorAll('h6, p, small');
+                    textElements.forEach(element => {
+                        let content = element.innerHTML;
+                        let modified = false;
+                        
+                        terms.forEach(term => {
+                            const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
+                            if (regex.test(content)) {
+                                content = content.replace(regex, '<mark class="bg-warning text-dark">$1</mark>');
+                                modified = true;
+                            }
+                        });
+                        
+                        if (modified) {
+                            element.innerHTML = content;
+                        }
+                    });
+                });
+            }
+
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             }
         </script>
     </body>

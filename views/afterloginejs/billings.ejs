@@ -601,6 +601,116 @@
                 submitButton.textContent = originalText;
             });
         });
+
+        // Handle membership plan form submissions with AJAX
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle all membership plan forms (select-plan, switch-plan, and cancel-plan)
+            const membershipForms = document.querySelectorAll('form[action*="/billing/select-plan"], form[action*="/billing/switch-plan"], form[action*="/billing/cancel-plan"]');
+            
+            membershipForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    const originalText = submitButton.textContent;
+                    const formData = new FormData(this);
+                    const action = this.getAttribute('action');
+                    
+                    // Special handling for cancel-plan (needs confirmation)
+                    if (action.includes('cancel-plan')) {
+                        const confirmed = confirm('Are you sure you want to cancel your current membership plan? This action cannot be undone.');
+                        if (!confirmed) {
+                            return; // Don't proceed if user cancels
+                        }
+                    }
+                    
+                    // Disable submit button and show loading state
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processing...';
+                    
+                    // Convert FormData to JSON
+                    const data = {};
+                    if (formData.get('planId')) {
+                        data.planId = formData.get('planId');
+                    }
+                    
+                    console.log('Submitting membership plan form:', {
+                        action: action,
+                        data: data
+                    });
+                    
+                    fetch(action, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        
+                        if (data.success) {
+                            // Show success message
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                            alertDiv.innerHTML = `
+                                <i class="bi bi-check-circle-fill me-2"></i>${data.message}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            
+                            // Insert alert at the top of the container
+                            const container = document.querySelector('.container.py-5 .row .col-md-12');
+                            container.insertBefore(alertDiv, container.children[1]);
+                            
+                            // Reload page to update the membership plan display
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            // Show error message
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                            alertDiv.innerHTML = `
+                                <i class="bi bi-exclamation-circle-fill me-2"></i>${data.message}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            
+                            // Insert alert at the top of the container
+                            const container = document.querySelector('.container.py-5 .row .col-md-12');
+                            container.insertBefore(alertDiv, container.children[1]);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="bi bi-exclamation-circle-fill me-2"></i>Network error: ${error.message}. Please check your connection and try again.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        
+                        // Insert alert at the top of the container
+                        const container = document.querySelector('.container.py-5 .row .col-md-12');
+                        container.insertBefore(alertDiv, container.children[1]);
+                    })
+                    .finally(() => {
+                        // Re-enable submit button
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalText;
+                    });
+                });
+            });
+        });
     </script>
 </body>
 </html>
