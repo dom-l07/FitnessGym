@@ -684,6 +684,37 @@ app.put("/billing/payment-methods/:id/set-default", checkAuthenticated, (req, re
     });
 });
 
+
+app.post("/billing/payment-methods/:id/set-default", checkAuthenticated, (req, res) => {
+    const memberId = req.session.user.member_id || req.session.user.id;
+    const paymentMethodId = req.params.id;
+    
+    db.query("UPDATE payment_methods SET is_default = 0 WHERE member_id = ?", [memberId], (err) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Error updating default payment method");
+            return res.redirect("/billings");
+        }
+        
+        db.query("UPDATE payment_methods SET is_default = 1 WHERE payment_method_id = ? AND member_id = ?", 
+            [paymentMethodId, memberId], (err, results) => {
+            if (err) {
+                console.error("Database error: ", err);
+                req.flash("error", "Error updating default payment method");
+                return res.redirect("/billings");
+            }
+            
+            if (results.affectedRows === 0) {
+                req.flash("error", "Payment method not found");
+                return res.redirect("/billings");
+            }
+            
+            req.flash("success", "Default payment method updated successfully");
+            res.redirect("/billings");
+        });
+    });
+});
+
 // Delete payment method
 app.delete("/billing/payment-methods/:id", checkAuthenticated, (req, res) => {
     const memberId = req.session.user.member_id || req.session.user.id;
@@ -693,6 +724,28 @@ app.delete("/billing/payment-methods/:id", checkAuthenticated, (req, res) => {
         if (err) return res.json({ success: false, message: "Failed to delete payment method" });
         if (results.affectedRows === 0) return res.json({ success: false, message: "Payment method not found" });
         res.json({ success: true, message: "Payment method deleted successfully" });
+    });
+});
+
+
+app.post("/billing/payment-methods/:id/delete", checkAuthenticated, (req, res) => {
+    const memberId = req.session.user.member_id || req.session.user.id;
+    
+    db.query("DELETE FROM payment_methods WHERE payment_method_id = ? AND member_id = ?", 
+        [req.params.id, memberId], (err, results) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Error deleting payment method");
+            return res.redirect("/billings");
+        }
+        
+        if (results.affectedRows === 0) {
+            req.flash("error", "Payment method not found");
+            return res.redirect("/billings");
+        }
+        
+        req.flash("success", "Payment method deleted successfully");
+        res.redirect("/billings");
     });
 });
 
@@ -928,6 +981,134 @@ app.post("/billing/cancel-plan", checkAuthenticated, (req, res) => {
             res.json({ 
                 success: true, 
                 message: `Successfully cancelled your ${subscription.plan_name} membership plan.` 
+            });
+        });
+    });
+});
+
+// Switch membership plan
+app.post("/billing/switch-plan", checkAuthenticated, (req, res) => {
+    const memberId = req.session.user.member_id || req.session.user.id;
+    const { planId } = req.body;
+    
+    const sqlCheckSubscription = `
+        SELECT ms.*, mp.plan_name, mp.price as current_price
+        FROM membership_subscriptions ms
+        JOIN membership_plans mp ON ms.plan_id = mp.plan_id
+        WHERE ms.member_id = ? AND ms.status = 'Active'
+    `;
+    const sqlNewPlanDetails = "SELECT * FROM membership_plans WHERE plan_id = ?";
+    const sqlWalletBalance = "SELECT balance FROM wallet WHERE member_id = ?";
+    
+    if (!planId) {
+        return res.json({ success: false, message: "Plan ID is required" });
+    }
+    
+    db.query(sqlCheckSubscription, [memberId], (err, activeSubscriptions) => {
+        if (err) {
+            console.error("Error checking active subscription:", err);
+            return res.json({ success: false, message: "Failed to check subscription status" });
+        }
+        
+        if (activeSubscriptions.length === 0) {
+            return res.json({ success: false, message: "No active subscription found to switch from" });
+        }
+        
+        const currentSubscription = activeSubscriptions[0];
+        
+        if (currentSubscription.plan_id == planId) {
+            return res.json({ success: false, message: "You are already subscribed to this plan" });
+        }
+        
+        db.query(sqlNewPlanDetails, [planId], (err, planResults) => {
+            if (err) {
+                console.error("Error fetching plan details:", err);
+                return res.json({ success: false, message: "Failed to fetch plan details" });
+            }
+            
+            if (planResults.length === 0) {
+                return res.json({ success: false, message: "Plan not found" });
+            }
+            
+            const newPlan = planResults[0];
+            
+            db.query(sqlWalletBalance, [memberId], (err, walletResults) => {
+                if (err) {
+                    console.error("Error fetching wallet balance:", err);
+                    return res.json({ success: false, message: "Failed to check wallet balance" });
+                }
+                
+                const currentBalance = walletResults.length > 0 ? walletResults[0].balance : 0;
+                const newPlanPrice = parseFloat(newPlan.price);
+                
+                if (currentBalance < newPlanPrice) {
+                    return res.json({ 
+                        success: false, 
+                        message: `Insufficient funds. You need $${newPlanPrice.toFixed(2)} but only have $${parseFloat(currentBalance).toFixed(2)} in your wallet.` 
+                    });
+                }
+                
+                db.beginTransaction((err) => {
+                    if (err) {
+                        console.error("Transaction start error:", err);
+                        return res.json({ success: false, message: "Transaction failed" });
+                    }
+                    
+                    // Update wallet balance
+                    const sqlUpdateWallet = "UPDATE wallet SET balance = balance - ? WHERE member_id = ?";
+                    
+                    db.query(sqlUpdateWallet, [newPlanPrice, memberId], (err) => {
+                        if (err) {
+                            return db.rollback(() => {
+                                console.error("Error updating wallet:", err);
+                                res.json({ success: false, message: "Payment failed" });
+                            });
+                        }
+                        
+                        // Update subscription to new plan
+                        const sqlUpdateSubscription = "UPDATE membership_subscriptions SET plan_id = ? WHERE subscription_id = ? AND member_id = ?";
+                        
+                        db.query(sqlUpdateSubscription, [planId, currentSubscription.subscription_id, memberId], (err) => {
+                            if (err) {
+                                return db.rollback(() => {
+                                    console.error("Error updating subscription:", err);
+                                    res.json({ success: false, message: "Plan switch failed" });
+                                });
+                            }
+                            
+                            // Add transaction record
+                            const sqlAddTransaction = `
+                                INSERT INTO wallet_transactions (member_id, transaction_type, amount, description, status)
+                                VALUES (?, 'Payment', ?, ?, 'Completed')
+                            `;
+                            
+                            const description = `Switched from ${currentSubscription.plan_name} to ${newPlan.plan_name} plan`;
+                            
+                            db.query(sqlAddTransaction, [memberId, newPlanPrice, description], (err) => {
+                                if (err) {
+                                    return db.rollback(() => {
+                                        console.error("Error adding transaction:", err);
+                                        res.json({ success: false, message: "Transaction record failed" });
+                                    });
+                                }
+                                
+                                db.commit((err) => {
+                                    if (err) {
+                                        return db.rollback(() => {
+                                            console.error("Transaction commit error:", err);
+                                            res.json({ success: false, message: "Transaction commit failed" });
+                                        });
+                                    }
+                                    
+                                    res.json({ 
+                                        success: true, 
+                                        message: `Successfully switched to ${newPlan.plan_name} plan for $${newPlanPrice.toFixed(2)}!` 
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
             });
         });
     });
@@ -1196,7 +1377,6 @@ app.post("/admin/members/:id/update", (req, res, next) => {
             return res.redirect("/admin/members");
         }
 
-        // Get current member data
         const sqlGetMember = "SELECT * FROM members WHERE id = ?";
         db.query(sqlGetMember, [memberId], (err, memberResults) => {
             if (err) {
@@ -1212,17 +1392,14 @@ app.post("/admin/members/:id/update", (req, res, next) => {
 
             const currentMember = memberResults[0];
             
-            // Handle profile picture upload
             let profilePicture = currentMember.profile_picture;
             if (req.file) {
                 profilePicture = req.file.filename;
             }
 
-            // Prepare update query
             let sqlUpdate, queryParams;
             
             if (password && password.trim() !== '') {
-                // Update with new password
                 if (password.length < 8) {
                     req.flash("error", "Password should be at least 8 characters");
                     return res.redirect("/admin/members");
@@ -1230,7 +1407,6 @@ app.post("/admin/members/:id/update", (req, res, next) => {
                 sqlUpdate = "UPDATE members SET username = ?, email = ?, password = SHA1(?), contact = ?, dob = ?, role = ?, gender = ?, address = ?, profile_picture = ? WHERE id = ?";
                 queryParams = [username, email, password, contact, dob, role, gender, address, profilePicture, memberId];
             } else {
-                // Update without changing password
                 sqlUpdate = "UPDATE members SET username = ?, email = ?, contact = ?, dob = ?, role = ?, gender = ?, address = ?, profile_picture = ? WHERE id = ?";
                 queryParams = [username, email, contact, dob, role, gender, address, profilePicture, memberId];
             }
@@ -1645,24 +1821,45 @@ app.post("/admin/locations/:id/delete", checkAuthenticated, checkAdmin, (req, re
 
 // Admin Rooms Management Page
 app.get("/admin/rooms", checkAuthenticated, checkAdmin, (req, res) => {
+    const { search, locationFilter } = req.query;
+    
     const renderData = {
         title: "KineGit | Manage Rooms",
         user: req.session.user,
         messages: req.flash("success"),
         errors: req.flash("error"),
         rooms: [],
-        locations: []
+        locations: [],
+        searchQuery: search || '',
+        locationFilter: locationFilter || ''
     };
 
-    // Get all rooms with location names
-    const sqlRooms = `
+    let sqlRooms = `
         SELECT r.*, l.name as location_name 
         FROM rooms r
         JOIN locations l ON r.location_id = l.location_id
-        ORDER BY l.name, r.room_name
     `;
+    let queryParams = [];
+    let whereConditions = [];
+
+    if (search && search.trim()) {
+        whereConditions.push("(LOWER(r.room_name) LIKE ? OR LOWER(l.name) LIKE ?)");
+        const searchTerm = `%${search.toLowerCase()}%`;
+        queryParams.push(searchTerm, searchTerm);
+    }
+
+    if (locationFilter && locationFilter.trim()) {
+        whereConditions.push("r.location_id = ?");
+        queryParams.push(locationFilter);
+    }
+
+    if (whereConditions.length > 0) {
+        sqlRooms += " WHERE " + whereConditions.join(" AND ");
+    }
+
+    sqlRooms += " ORDER BY l.name, r.room_name";
     
-    db.query(sqlRooms, (err, rooms) => {
+    db.query(sqlRooms, queryParams, (err, rooms) => {
         if (err) {
             console.error("Database error (rooms): ", err);
             req.flash("error", "Error fetching rooms data");
@@ -1670,7 +1867,6 @@ app.get("/admin/rooms", checkAuthenticated, checkAdmin, (req, res) => {
             renderData.rooms = rooms || [];
         }
 
-        // Get all locations for the dropdown
         const sqlLocations = "SELECT * FROM locations ORDER BY name";
         db.query(sqlLocations, (err, locations) => {
             if (err) {
@@ -1685,33 +1881,8 @@ app.get("/admin/rooms", checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
-// Get room details (AJAX)
-app.get("/admin/rooms/:id/details", checkAuthenticated, checkAdmin, (req, res) => {
-    const roomId = req.params.id;
-    
-    const sql = `
-        SELECT r.*, l.name as location_name 
-        FROM rooms r
-        JOIN locations l ON r.location_id = l.location_id
-        WHERE r.room_id = ?
-    `;
-    
-    db.query(sql, [roomId], (err, results) => {
-        if (err) {
-            console.error("Database error: ", err);
-            return res.json({ success: false, error: "Database error" });
-        }
-        
-        if (results.length === 0) {
-            return res.json({ success: false, error: "Room not found" });
-        }
-        
-        res.json({ success: true, room: results[0] });
-    });
-});
-
-// Get room edit data (AJAX)
-app.get("/admin/rooms/:id/edit-data", checkAuthenticated, checkAdmin, (req, res) => {
+// Edit room form for modal (returns just the form HTML)
+app.get("/admin/rooms/:id/edit-form", checkAuthenticated, checkAdmin, (req, res) => {
     const roomId = req.params.id;
     
     const sqlRoom = `
@@ -1726,6 +1897,111 @@ app.get("/admin/rooms/:id/edit-data", checkAuthenticated, checkAdmin, (req, res)
     db.query(sqlRoom, [roomId], (err, roomResults) => {
         if (err) {
             console.error("Database error: ", err);
+            return res.status(500).json({ error: "Error fetching room details" });
+        }
+        
+        if (roomResults.length === 0) {
+            return res.status(404).json({ error: "Room not found" });
+        }
+        
+        const room = roomResults[0];
+        
+        db.query(sqlLocations, (err, locations) => {
+            if (err) {
+                console.error("Database error: ", err);
+                return res.status(500).json({ error: "Error fetching locations data" });
+            }
+            
+            const formHtml = `
+                <form id="editRoomForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="roomName" class="form-label">Room Type *</label>
+                                <input type="text" class="form-control" id="roomName" name="roomName" 
+                                       value="${room.room_name}" 
+                                       placeholder="Enter room type (e.g., Cardio, Strength, Zumba, Yoga, etc.)" 
+                                       required maxlength="50">
+                                <small class="text-muted">Enter any room type you want</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="locationId" class="form-label">Location *</label>
+                                <select class="form-select" id="locationId" name="locationId" required>
+                                    <option value="">Select Location</option>
+                                    ${locations.map(location => 
+                                        `<option value="${location.location_id}" ${location.location_id == room.location_id ? 'selected' : ''}>
+                                            ${location.name}
+                                        </option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="capacity" class="form-label">Capacity *</label>
+                                <input type="number" class="form-control" id="capacity" name="capacity" 
+                                       value="${room.capacity}" min="1" max="100" required>
+                                <small class="text-muted">Maximum number of people this room can accommodate</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="roomImage" class="form-label">Room Image</label>
+                                <input type="file" class="form-control" id="roomImage" name="roomImage" accept="image/*">
+                                <small class="text-muted">Leave empty to keep current image</small>
+                            </div>
+
+                            <!-- Current Image Preview -->
+                            <div class="mb-3">
+                                <label class="form-label">Current Image</label>
+                                <div class="text-center">
+                                    <img src="/images/roomsImg/${room.room_name.toLowerCase()}/${room.image}" 
+                                         alt="Current room image" 
+                                         class="img-thumbnail" 
+                                         style="max-height: 200px; object-fit: cover;">
+                                    <p class="text-muted mt-2 small">
+                                        Current: ${room.image}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-check-circle me-1"></i>Update Room
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            res.json({ success: true, formHtml: formHtml });
+        });
+    });
+});
+
+// Get room details for modal (AJAX)
+app.get("/admin/rooms/:id/details", checkAuthenticated, checkAdmin, (req, res) => {
+    const roomId = req.params.id;
+    
+    const sqlRoom = `
+        SELECT r.*, l.name as location_name 
+        FROM rooms r
+        JOIN locations l ON r.location_id = l.location_id
+        WHERE r.room_id = ?
+    `;
+    
+    db.query(sqlRoom, [roomId], (err, roomResults) => {
+        if (err) {
+            console.error("Database error: ", err);
             return res.json({ success: false, error: "Database error" });
         }
         
@@ -1733,16 +2009,27 @@ app.get("/admin/rooms/:id/edit-data", checkAuthenticated, checkAdmin, (req, res)
             return res.json({ success: false, error: "Room not found" });
         }
         
-        db.query(sqlLocations, (err, locations) => {
+        const room = roomResults[0];
+        
+        const sqlClasses = `
+            SELECT c.*, 
+                   (SELECT COUNT(*) FROM bookings WHERE class_id = c.class_id AND status = 'Booked') as participant_count
+            FROM classes c
+            WHERE c.room_id = ?
+            ORDER BY c.class_start_time DESC
+            LIMIT 5
+        `;
+        
+        db.query(sqlClasses, [roomId], (err, classes) => {
             if (err) {
-                console.error("Database error: ", err);
-                return res.json({ success: false, error: "Database error" });
+                console.error("Database error (classes): ", err);
+                classes = [];
             }
             
             res.json({ 
                 success: true, 
-                room: roomResults[0],
-                locations: locations || []
+                room: room,
+                classes: classes || []
             });
         });
     });
@@ -1752,7 +2039,6 @@ app.get("/admin/rooms/:id/edit-data", checkAuthenticated, checkAdmin, (req, res)
 app.post("/admin/rooms/add", checkAuthenticated, checkAdmin, upload.single('roomImage'), (req, res) => {
     const { roomName, locationId, capacity } = req.body;
     
-    // Validation
     if (!roomName || !locationId || !capacity) {
         req.flash("error", "All fields are required");
         return res.redirect("/admin/rooms");
@@ -1763,10 +2049,8 @@ app.post("/admin/rooms/add", checkAuthenticated, checkAdmin, upload.single('room
         return res.redirect("/admin/rooms");
     }
     
-    // Set default image based on room type
     let imageName = `${roomName.toLowerCase()}Room1.jpg`;
     
-    // If image was uploaded, use that instead
     if (req.file) {
         imageName = req.file.filename;
     }
@@ -1788,7 +2072,6 @@ app.post("/admin/rooms/:id/update", checkAuthenticated, checkAdmin, upload.singl
     const roomId = req.params.id;
     const { roomName, locationId, capacity } = req.body;
     
-    // Validation
     if (!roomName || !locationId || !capacity) {
         req.flash("error", "All fields are required");
         return res.redirect("/admin/rooms");
@@ -1799,7 +2082,6 @@ app.post("/admin/rooms/:id/update", checkAuthenticated, checkAdmin, upload.singl
         return res.redirect("/admin/rooms");
     }
     
-    // Check if new image was uploaded
     if (req.file) {
         const sql = "UPDATE rooms SET room_name = ?, location_id = ?, capacity = ?, image = ? WHERE room_id = ?";
         db.query(sql, [roomName, locationId, capacity, req.file.filename, roomId], (err, result) => {
@@ -1812,7 +2094,6 @@ app.post("/admin/rooms/:id/update", checkAuthenticated, checkAdmin, upload.singl
             res.redirect("/admin/rooms");
         });
     } else {
-        // Update without changing image
         const sql = "UPDATE rooms SET room_name = ?, location_id = ?, capacity = ? WHERE room_id = ?";
         db.query(sql, [roomName, locationId, capacity, roomId], (err, result) => {
             if (err) {
@@ -1830,7 +2111,6 @@ app.post("/admin/rooms/:id/update", checkAuthenticated, checkAdmin, upload.singl
 app.post("/admin/rooms/:id/delete", checkAuthenticated, checkAdmin, (req, res) => {
     const roomId = req.params.id;
     
-    // First get the room name for the success message
     const sqlGetRoom = "SELECT room_name FROM rooms WHERE room_id = ?";
     db.query(sqlGetRoom, [roomId], (err, results) => {
         if (err) {
@@ -1846,7 +2126,6 @@ app.post("/admin/rooms/:id/delete", checkAuthenticated, checkAdmin, (req, res) =
         
         const roomName = results[0].room_name;
         
-        // Check if room has any classes
         const sqlCheckClasses = "SELECT COUNT(*) as count FROM classes WHERE room_id = ?";
         db.query(sqlCheckClasses, [roomId], (err, classResults) => {
             if (err) {
@@ -1860,7 +2139,6 @@ app.post("/admin/rooms/:id/delete", checkAuthenticated, checkAdmin, (req, res) =
                 return res.redirect("/admin/rooms");
             }
             
-            // Safe to delete room
             const sqlDelete = "DELETE FROM rooms WHERE room_id = ?";
             db.query(sqlDelete, [roomId], (err, result) => {
                 if (err) {
@@ -1970,7 +2248,6 @@ app.get("/admin/classes/:id/edit-data", checkAuthenticated, checkAdmin, (req, re
 app.post("/admin/classes/add", checkAuthenticated, checkAdmin, (req, res) => {
     const { class_name, class_type, instructor_name, max_participants, location_id, room_id, class_start_time, class_end_time } = req.body;
 
-    // Validation
     if (!class_name || !class_type || !instructor_name || !max_participants || !location_id || !room_id || !class_start_time || !class_end_time) {
         req.flash("error", "All fields are required.");
         return res.redirect("/admin/classes");

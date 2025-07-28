@@ -75,14 +75,8 @@
                                     <% if (formData && formData.contact) { %> value="<%= formData.contact %>" <% } else { %> value="" <% } %>>
                                 </div>
                                 
-                                <div class="mb-4">
-                                    <label for="role" class="form-label fw-semibold">Account Type</label>
-                                    <select id="role" name="role" class="form-select form-select-lg border-2" required>
-                                        <option value="">Select Account Type</option>
-                                        <option value="user" <% if (formData && formData.role === 'user') { %> selected <% } %>>Member</option>
-                                        <option value="admin" <% if (formData && formData.role === 'admin') { %> selected <% } %>>Administrator</option>
-                                    </select>
-                                </div>
+                                <!-- Hidden field to set role as user (member) -->
+                                <input type="hidden" name="role" value="user">
                                 
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">Create Account</button>

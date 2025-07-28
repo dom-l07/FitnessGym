@@ -183,6 +183,12 @@ INSERT INTO `classes` (room_id, location_id, class_name, class_type, instructor_
 (12, 5, "Bim Bam Boom", "Zumba", "Mrs Liu", "2025-08-20 10:45:00", "2025-08-20 13:00:00", 40),
 (12, 5, "Zoom Zoom", "Zumba", "Mrs Lim", "2025-09-22 18:30:00", "2025-09-22 20:30:00", 30);
 
+-- Insert membership plans
+INSERT INTO `membership_plans` (plan_name, price, features) VALUES
+('Basic', 39.00, 'Gym Access,Basic Equipment,Locker Room'),
+('Premium', 79.00, 'All Basic Features,24/7 Access to Gym,Personal Training (2/month),Nutrition Consultation'),
+('Elite', 129.00, 'All Premium Features,Unlimited Personal Training,VIP Locker Room,Guest Passes (5/month),Priority Booking');
+
 -- Add wallet entry for existing members (run this after creating the tables)
 INSERT INTO `wallet` (`member_id`, `balance`) 
 SELECT `id`, 0.00 FROM `members` 
