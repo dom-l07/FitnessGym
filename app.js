@@ -95,23 +95,6 @@ const validateRegistration = (req, res, next) => {
     next();
 };
 
-// Helper function for database error handling
-const handleDbError = (err, res, message = "Database error occurred") => {
-    console.error("Database error: ", err);
-    res.status(500).json({ success: false, message });
-};
-
-// Helper function for render data initialization
-const initRenderData = (title, user, messages = [], errors = []) => ({
-    title,
-    user,
-    messages,
-    errors
-});
-
-// Helper function to get user ID
-const getUserId = (req) => req.session.user.member_id || req.session.user.id;
-
 // Routes
 app.get("/", (req, res) => {
     const renderData = {
