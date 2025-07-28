@@ -169,13 +169,27 @@ app.get("/", (req, res) => {
 
 // Public pages (accessible without login)
 app.get("/locations", (req, res) => {
-    db.query("SELECT * FROM locations ORDER BY name", (err, locations) => {
+    const searchQuery = req.query.search ? req.query.search.trim() : '';
+    
+    let sql = "SELECT * FROM locations";
+    let queryParams = [];
+    
+    if (searchQuery) {
+        sql += " WHERE LOWER(name) LIKE ? OR LOWER(address) LIKE ?";
+        const searchTerm = `%${searchQuery.toLowerCase()}%`;
+        queryParams = [searchTerm, searchTerm];
+    }
+    
+    sql += " ORDER BY name";
+    
+    db.query(sql, queryParams, (err, locations) => {
         if (err) console.error("Database error: ", err);
         res.render("locations", {
             title: "KineGit | Locations",
             user: req.session.user || null,
             messages: req.flash("success"),
-            locations: locations || []
+            locations: locations || [],
+            searchQuery: searchQuery
         });
     });
 });
