@@ -504,16 +504,41 @@
             const submitButton = this.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
             
+            // Remove any existing alerts in the modal
+            const existingAlerts = document.querySelectorAll('#addFundsModal .alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
             // Disable submit button and show loading state
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processing...';
             
+            // Convert FormData to regular object for JSON
+            const data = {
+                amount: formData.get('amount'),
+                paymentMethodId: formData.get('paymentMethodId')
+            };
+            
+            console.log('Submitting form with data:', data);
+            
             fetch('/billing/add-funds', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
+                
                 if (data.success) {
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addFundsModal'));
@@ -553,11 +578,16 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Fetch error:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                
                 const alertDiv = document.createElement('div');
                 alertDiv.className = 'alert alert-danger alert-dismissible fade show';
                 alertDiv.innerHTML = `
-                    <i class="bi bi-exclamation-circle-fill me-2"></i>An error occurred. Please try again.
+                    <i class="bi bi-exclamation-circle-fill me-2"></i>Network error: ${error.message}. Please check your connection and try again.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
                 
