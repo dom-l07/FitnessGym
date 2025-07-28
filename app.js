@@ -1011,6 +1011,7 @@ app.get("/dashboard", checkAuthenticated, checkAdmin, (req, res) => {
             totalMembers: 0,
             totalClasses: 0,
             totalLocations: 0,
+            totalRooms: 0,
             totalBookings: 0
         }
     };
@@ -1025,6 +1026,7 @@ app.get("/dashboard", checkAuthenticated, checkAdmin, (req, res) => {
             (SELECT COUNT(*) FROM members) as totalMembers,
             (SELECT COUNT(*) FROM classes) as totalClasses,
             (SELECT COUNT(*) FROM locations) as totalLocations,
+            (SELECT COUNT(*) FROM rooms) as totalRooms,
             (SELECT COUNT(*) FROM bookings) as totalBookings
     `;
     
@@ -1635,6 +1637,240 @@ app.post("/admin/locations/:id/delete", checkAuthenticated, checkAdmin, (req, re
 
             req.flash("success", `Location "${locationName}" has been successfully deleted.`);
             res.redirect("/admin/locations");
+        });
+    });
+});
+
+// ===== ADMIN ROOMS MANAGEMENT ROUTES =====
+
+// Admin Rooms Management Page
+app.get("/admin/rooms", checkAuthenticated, checkAdmin, (req, res) => {
+    const renderData = {
+        title: "KineGit | Manage Rooms",
+        user: req.session.user,
+        messages: req.flash("success"),
+        errors: req.flash("error"),
+        rooms: [],
+        locations: []
+    };
+
+    // Get all rooms with location names
+    const sqlRooms = `
+        SELECT r.*, l.name as location_name 
+        FROM rooms r
+        JOIN locations l ON r.location_id = l.location_id
+        ORDER BY l.name, r.room_name
+    `;
+    
+    db.query(sqlRooms, (err, rooms) => {
+        if (err) {
+            console.error("Database error (rooms): ", err);
+            req.flash("error", "Error fetching rooms data");
+        } else {
+            renderData.rooms = rooms || [];
+        }
+
+        // Get all locations for the dropdown
+        const sqlLocations = "SELECT * FROM locations ORDER BY name";
+        db.query(sqlLocations, (err, locations) => {
+            if (err) {
+                console.error("Database error (locations): ", err);
+                req.flash("error", "Error fetching locations data");
+            } else {
+                renderData.locations = locations || [];
+            }
+
+            res.render("admin/panel/manageRooms", renderData);
+        });
+    });
+});
+
+// Get room details (AJAX)
+app.get("/admin/rooms/:id/details", checkAuthenticated, checkAdmin, (req, res) => {
+    const roomId = req.params.id;
+    
+    const sql = `
+        SELECT r.*, l.name as location_name 
+        FROM rooms r
+        JOIN locations l ON r.location_id = l.location_id
+        WHERE r.room_id = ?
+    `;
+    
+    db.query(sql, [roomId], (err, results) => {
+        if (err) {
+            console.error("Database error: ", err);
+            return res.json({ success: false, error: "Database error" });
+        }
+        
+        if (results.length === 0) {
+            return res.json({ success: false, error: "Room not found" });
+        }
+        
+        res.json({ success: true, room: results[0] });
+    });
+});
+
+// Get room edit data (AJAX)
+app.get("/admin/rooms/:id/edit-data", checkAuthenticated, checkAdmin, (req, res) => {
+    const roomId = req.params.id;
+    
+    const sqlRoom = `
+        SELECT r.*, l.name as location_name 
+        FROM rooms r
+        JOIN locations l ON r.location_id = l.location_id
+        WHERE r.room_id = ?
+    `;
+    
+    const sqlLocations = "SELECT * FROM locations ORDER BY name";
+    
+    db.query(sqlRoom, [roomId], (err, roomResults) => {
+        if (err) {
+            console.error("Database error: ", err);
+            return res.json({ success: false, error: "Database error" });
+        }
+        
+        if (roomResults.length === 0) {
+            return res.json({ success: false, error: "Room not found" });
+        }
+        
+        db.query(sqlLocations, (err, locations) => {
+            if (err) {
+                console.error("Database error: ", err);
+                return res.json({ success: false, error: "Database error" });
+            }
+            
+            res.json({ 
+                success: true, 
+                room: roomResults[0],
+                locations: locations || []
+            });
+        });
+    });
+});
+
+// Add new room
+app.post("/admin/rooms/add", checkAuthenticated, checkAdmin, upload.single('roomImage'), (req, res) => {
+    const { roomName, locationId, capacity } = req.body;
+    
+    // Validation
+    if (!roomName || !locationId || !capacity) {
+        req.flash("error", "All fields are required");
+        return res.redirect("/admin/rooms");
+    }
+    
+    if (capacity < 1 || capacity > 100) {
+        req.flash("error", "Capacity must be between 1 and 100");
+        return res.redirect("/admin/rooms");
+    }
+    
+    // Set default image based on room type
+    let imageName = `${roomName.toLowerCase()}Room1.jpg`;
+    
+    // If image was uploaded, use that instead
+    if (req.file) {
+        imageName = req.file.filename;
+    }
+    
+    const sql = "INSERT INTO rooms (room_name, location_id, capacity, image) VALUES (?, ?, ?, ?)";
+    db.query(sql, [roomName, locationId, capacity, imageName], (err, result) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Error adding room. Please try again.");
+        } else {
+            req.flash("success", `${roomName} room has been successfully added.`);
+        }
+        res.redirect("/admin/rooms");
+    });
+});
+
+// Update room
+app.post("/admin/rooms/:id/update", checkAuthenticated, checkAdmin, upload.single('roomImage'), (req, res) => {
+    const roomId = req.params.id;
+    const { roomName, locationId, capacity } = req.body;
+    
+    // Validation
+    if (!roomName || !locationId || !capacity) {
+        req.flash("error", "All fields are required");
+        return res.redirect("/admin/rooms");
+    }
+    
+    if (capacity < 1 || capacity > 100) {
+        req.flash("error", "Capacity must be between 1 and 100");
+        return res.redirect("/admin/rooms");
+    }
+    
+    // Check if new image was uploaded
+    if (req.file) {
+        const sql = "UPDATE rooms SET room_name = ?, location_id = ?, capacity = ?, image = ? WHERE room_id = ?";
+        db.query(sql, [roomName, locationId, capacity, req.file.filename, roomId], (err, result) => {
+            if (err) {
+                console.error("Database error: ", err);
+                req.flash("error", "Error updating room. Please try again.");
+            } else {
+                req.flash("success", `${roomName} room has been successfully updated.`);
+            }
+            res.redirect("/admin/rooms");
+        });
+    } else {
+        // Update without changing image
+        const sql = "UPDATE rooms SET room_name = ?, location_id = ?, capacity = ? WHERE room_id = ?";
+        db.query(sql, [roomName, locationId, capacity, roomId], (err, result) => {
+            if (err) {
+                console.error("Database error: ", err);
+                req.flash("error", "Error updating room. Please try again.");
+            } else {
+                req.flash("success", `${roomName} room has been successfully updated.`);
+            }
+            res.redirect("/admin/rooms");
+        });
+    }
+});
+
+// Delete room
+app.post("/admin/rooms/:id/delete", checkAuthenticated, checkAdmin, (req, res) => {
+    const roomId = req.params.id;
+    
+    // First get the room name for the success message
+    const sqlGetRoom = "SELECT room_name FROM rooms WHERE room_id = ?";
+    db.query(sqlGetRoom, [roomId], (err, results) => {
+        if (err) {
+            console.error("Database error: ", err);
+            req.flash("error", "Error deleting room. Please try again.");
+            return res.redirect("/admin/rooms");
+        }
+        
+        if (results.length === 0) {
+            req.flash("error", "Room not found.");
+            return res.redirect("/admin/rooms");
+        }
+        
+        const roomName = results[0].room_name;
+        
+        // Check if room has any classes
+        const sqlCheckClasses = "SELECT COUNT(*) as count FROM classes WHERE room_id = ?";
+        db.query(sqlCheckClasses, [roomId], (err, classResults) => {
+            if (err) {
+                console.error("Database error: ", err);
+                req.flash("error", "Error checking room dependencies. Please try again.");
+                return res.redirect("/admin/rooms");
+            }
+            
+            if (classResults[0].count > 0) {
+                req.flash("error", `Cannot delete ${roomName} room because it has ${classResults[0].count} associated classes. Please delete or reassign the classes first.`);
+                return res.redirect("/admin/rooms");
+            }
+            
+            // Safe to delete room
+            const sqlDelete = "DELETE FROM rooms WHERE room_id = ?";
+            db.query(sqlDelete, [roomId], (err, result) => {
+                if (err) {
+                    console.error("Database error: ", err);
+                    req.flash("error", "Error deleting room. Please try again.");
+                } else {
+                    req.flash("success", `${roomName} room has been successfully deleted.`);
+                }
+                res.redirect("/admin/rooms");
+            });
         });
     });
 });
