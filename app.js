@@ -27,18 +27,113 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
-});
+// Database connection with auto-reconnect functionality
+let db;
+let isConnecting = false;
 
-db.connect((err) => {
-    if (err) console.error("Error connecting to MySQL:", err);
-    else console.log("Connected to MySQL database");
-});
+function createDatabaseConnection() {
+    if (isConnecting) {
+        return;
+    }
+    
+    isConnecting = true;
+    console.log("Creating database connection...");
+    
+    db = mysql.createConnection({
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        acquireTimeout: 60000,
+        timeout: 60000,
+        reconnect: true
+    });
+
+    db.connect((err) => {
+        isConnecting = false;
+        if (err) {
+            console.error("Error connecting to MySQL:", err);
+            console.log("Will retry connection in 5 seconds...");
+            setTimeout(createDatabaseConnection, 5000);
+        } else {
+            console.log("Connected to MySQL database");
+        }
+    });
+
+    // Handle connection errors and reconnect
+    db.on('error', (err) => {
+        console.error('Database connection error:', err);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST' || 
+            err.code === 'ECONNRESET' || 
+            err.code === 'ETIMEDOUT' || 
+            err.fatal) {
+            console.log('Database connection lost. Attempting to reconnect...');
+            createDatabaseConnection();
+        }
+    });
+
+    db.on('end', () => {
+        console.log('Database connection ended. Attempting to reconnect...');
+        createDatabaseConnection();
+    });
+}
+
+// Helper function to execute database queries safely
+function safeDbQuery(sql, params, callback) {
+    // Handle optional parameters
+    if (typeof params === 'function') {
+        callback = params;
+        params = [];
+    }
+
+    // Check if connection exists and is in a good state
+    if (!db || db.state === 'disconnected' || db.state === 'protocol_error') {
+        console.log("Database connection not available, attempting to reconnect...");
+        createDatabaseConnection();
+        
+        // Wait a bit and retry
+        setTimeout(() => {
+            if (db && db.state === 'authenticated') {
+                db.query(sql, params, callback);
+            } else {
+                console.error("Database connection still not available after reconnect attempt");
+                callback(new Error("Database connection not available"), null);
+            }
+        }, 2000);
+        return;
+    }
+
+    // Execute the query
+    db.query(sql, params, (err, results) => {
+        if (err) {
+            console.error("Database query error:", err);
+            console.error("SQL:", sql);
+            
+            // If it's a connection error, try to reconnect and retry once
+            if (err.code === 'PROTOCOL_CONNECTION_LOST' || 
+                err.code === 'ECONNRESET' || 
+                err.code === 'ETIMEDOUT' || 
+                err.fatal) {
+                console.log("Connection error detected, attempting reconnect and retry...");
+                createDatabaseConnection();
+                
+                setTimeout(() => {
+                    if (db && db.state === 'authenticated') {
+                        db.query(sql, params, callback);
+                    } else {
+                        callback(err, results);
+                    }
+                }, 2000);
+                return;
+            }
+        }
+        callback(err, results);
+    });
+}
+
+// Initialize the database connection
+createDatabaseConnection();
 
 // View engine and middleware
 app.set("view engine", "ejs");
@@ -111,13 +206,8 @@ app.get("/", (req, res) => {
         }
     };
 
-    if (!db || db.state === 'disconnected') {
-        console.error("Database connection not available");
-        return res.render("index", renderData);
-    }
-
     const sqlLocations = "SELECT * FROM locations ORDER BY name LIMIT 3";
-    db.query(sqlLocations, (err, locations) => {
+    safeDbQuery(sqlLocations, (err, locations) => {
         if (err) {
             console.error("Database error (locations): ", err);
         } else {
@@ -141,7 +231,7 @@ app.get("/", (req, res) => {
             LIMIT 3
         `;
         
-        db.query(sqlUpcomingClasses, (err, upcomingClasses) => {
+        safeDbQuery(sqlUpcomingClasses, (err, upcomingClasses) => {
             if (err) {
                 console.error("Database error (upcoming classes): ", err);
             } else {
@@ -155,7 +245,7 @@ app.get("/", (req, res) => {
                     (SELECT COUNT(*) FROM members WHERE role = 'user') as totalMembers
             `;
             
-            db.query(sqlStats, (err, stats) => {
+            safeDbQuery(sqlStats, (err, stats) => {
                 if (err) {
                     console.error("Database error (stats): ", err);
                 } else if (stats && stats[0]) {
@@ -170,7 +260,7 @@ app.get("/", (req, res) => {
 
 // Public pages (accessible without login)
 app.get("/locations", (req, res) => {
-    db.query("SELECT * FROM locations ORDER BY name", (err, locations) => {
+    safeDbQuery("SELECT * FROM locations ORDER BY name", (err, locations) => {
         if (err) console.error("Database error: ", err);
         res.render("locations", {
             title: "KineGit | Locations",
